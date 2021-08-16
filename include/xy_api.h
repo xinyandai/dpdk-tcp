@@ -1,77 +1,61 @@
 #ifndef __XY_API_H__
 #define __XY_API_H__
 
-
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 
-#include <stdint.h>
-#include <signal.h>
 #include <arpa/inet.h>
 #include <inttypes.h>
+#include <rte_arp.h>
+#include <rte_byteorder.h>
+#include <rte_cycles.h>
 #include <rte_eal.h>
 #include <rte_ethdev.h>
-#include <rte_cycles.h>
-#include <rte_lcore.h>
-#include <rte_byteorder.h>
-#include <rte_mbuf.h>
 #include <rte_ether.h>
-#include <rte_arp.h>
 #include <rte_icmp.h>
 #include <rte_ip.h>
 #include <rte_ip_frag.h>
+#include <rte_lcore.h>
+#include <rte_mbuf.h>
 #include <rte_tcp.h>
+#include <signal.h>
+#include <stdint.h>
 
-extern uint32_t __xy_this_ip;
+#include "xy_ip.h"
+#include "xy_arp.h"
+#include "xy_eth.h"
+#include "xy_tcp.h"
+#include "xy_icmp.h"
+#include "xy_socks.h"
+#include "xy_struct.h"
+#include "xy_macros.h"
 
-#define BURST_SIZE 	1024
+extern uint8_t ttl;
+extern uint32_t xy_this_ip;
+extern struct rte_ether_addr xy_this_mac;
 
-#define xy_return_if(condition, ret) { \
- if ((condition)) { \
-	 return (ret); \
- } \
-}
+#define BURST_SIZE 1024
+#define tcp_sock_t xy_tcp_socket *
 
-#define xy_rte_exit_if(condition, ...) { \
- if ((condition)) { \
-	 rte_exit(EXIT_FAILURE, __VA_ARGS__); \
- } \
-}
+tcp_sock_t xy_socket(int domain, int type, int protocol);
+int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port);
+int xy_listen(tcp_sock_t tcp_sk, int backlog);
+tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
+ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags);
+ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len);
+int xy_close(tcp_sock_t tcp_sk);
 
-#define xy_warn_if(condition, ...) { \
- if ((condition)) { \
-	 printf(__VA_ARGS__); \
- } \
-}
-
-#define xy_message_if(condition, ...) { \
- if ((condition)) { \
-	 printf(__VA_ARGS__); \
- } \
-}
-
-inline int process_arp(struct rte_mbuf *mbuf, struct ether_hdr *eh, int len);
-inline int process_icmp(struct rte_mbuf *mbuf,  struct ether_hdr *eh, struct ipv4_hdr *iph, int ipv4_hdrlen, int len);
-inline int process_tcp(struct rte_mbuf *mbuf,  struct ether_hdr *eh, struct ipv4_hdr *iph, int ipv4_hdrlen, int len);;
-
-int xy_socket(int domain, int type, int protocol);
-int xy_bind(int sockid, const struct sockaddr *addr, socklen_t addrlen);
-int xy_listen(int sockid, int backlog);
-int xy_accept(int sockid, struct sockaddr *addr, socklen_t *addrlen);
-ssize_t xy_recv(int sockid, char *buf, size_t len, int flags);
-ssize_t xy_send(int sockid, const char *buf, size_t len);
-int xy_close(int sockid);
-
-void xy_tcp_setup(int argc, const char** argv);
-
+struct rte_mempool *xy_setup(int argc, char *argv[]);
+int xy_dev_port_init(struct rte_mempool *buf_pool,
+                     struct rte_ether_addr *eth_addr, uint16_t port,
+                     uint16_t rx_rings, uint16_t tx_rings,
+                     uint16_t nb_rxd, uint16_t nb_txd);
 
 int socket(int domain, int type, int protocol);
-int bind(int sockid, const struct sockaddr *addr, socklen_t addrlen);
-int listen(int sockid, int backlog);
-int accept(int sockid, struct sockaddr *addr, socklen_t *addrlen);
-ssize_t recv(int sockid, void *buf, size_t len, int flags);
-ssize_t send(int sockid, const void *buf, size_t len, int flags);
-
-
+int bind(int sock_id, const struct sockaddr *addr, socklen_t addr_len);
+int listen(int sock_id, int backlog);
+int accept(int sock_id, struct sockaddr *addr, socklen_t *addr_len);
+ssize_t recv(int sock_id, void *buf, size_t len, int flags);
+ssize_t send(int sock_id, const void *buf, size_t len, int flags);
 
 #endif
