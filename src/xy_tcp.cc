@@ -191,6 +191,7 @@ static inline int state_tcp_handle_ack(xy_tcp_socket *tcp_sk,
       tcp_sk->tcb.snd_wl2 = tcp_h->recv_ack;
     }
   }
+  return 0;
 }
 
 /**
@@ -382,6 +383,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
                     tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
   }
+
+  return 0;
 }
 
 int tcp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,

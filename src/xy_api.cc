@@ -38,6 +38,8 @@ int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port) {
 
   tcp_sk->ip_socket.ip_src = ip;
   tcp_sk->port_src = port;
+
+  return 0;
 }
 
 int xy_listen(tcp_sock_t tcp_sk, int backlog) {
@@ -65,9 +67,12 @@ tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip,
 }
 
 ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags) {
+  return 0;
 }
 
 ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len,
-                int flags) {}
+                int flags) {
+  return 0;
+}
 
-int xy_close(tcp_sock_t tcp_sk) {}
+int xy_close(tcp_sock_t tcp_sk) { return 0; }
