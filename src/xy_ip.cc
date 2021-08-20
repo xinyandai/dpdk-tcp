@@ -3,7 +3,7 @@
 int ip_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh, int len) {
   struct rte_ipv4_hdr *iph =
       (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
-  int ipv4_hdr_len = (iph->version_ihl & RTE_IPV4_HDR_IHL_MASK) << 2;
+  int ipv4_hdr_len = rte_ipv4_hdr_len(iph);
 
   if (((iph->version_ihl & 0xF0) == 0x40) &&
       ((iph->fragment_offset & rte_cpu_to_be_16(RTE_IPV4_HDR_OFFSET_MASK)) ==
@@ -19,14 +19,16 @@ int ip_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh, int len) {
   return 0;
 }
 
-int ip_send(xy_ip_socket *ip_sk, struct rte_mbuf *m_buf,
-            struct rte_ipv4_hdr *iph, struct rte_ether_hdr *eh,
-            uint8_t next_proto_id) {
-  iph->version_ihl = 0x45;             // version and header length
-  iph->type_of_service = 0;            // TODO
-  iph->total_length;                   // TODO /**< length of packet */
-  iph->packet_id;                      // TODO /**< packet ID */
-  iph->fragment_offset;                // TODO /**< fragmentation offset */
+static int _ip_send(xy_ip_socket *ip_sk, struct rte_mbuf *m_buf,
+                    struct rte_ipv4_hdr *iph, struct rte_ether_hdr *eh,
+                    uint8_t next_proto_id, rte_be16_t total_length) {
+  iph->version_ihl = 0x45;   // version and header length
+  iph->type_of_service = 0;  // TODO
+  iph->total_length = total_length;
+
+  iph->packet_id = rte_cpu_to_be_16(ip_sk->id++);
+  iph->fragment_offset = 0x4000;  // TODO no fragmentation
+
   iph->time_to_live = ttl;             // time to live
   iph->next_proto_id = next_proto_id;  // tcp: iph->next_proto_id = 6
 
@@ -37,4 +39,18 @@ int ip_send(xy_ip_socket *ip_sk, struct rte_mbuf *m_buf,
 
   return eth_send(&ip_sk->eth_socket, m_buf, eh,
                   rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4));
+}
+
+int ip_forward(xy_ip_socket *ip_sk, struct rte_mbuf *m_buf,
+               struct rte_ipv4_hdr *iph, struct rte_ether_hdr *eh,
+               uint8_t next_proto_id) {
+  return _ip_send(ip_sk, m_buf, iph, eh, next_proto_id, iph->total_length);
+}
+
+int ip_send(xy_ip_socket *ip_sk, struct rte_mbuf *m_buf,
+            struct rte_ipv4_hdr *iph, struct rte_ether_hdr *eh,
+            uint8_t next_proto_id, uint16_t data_len) {
+  const rte_be16_t total_length =
+      rte_cpu_to_be_16(data_len + sizeof(struct rte_ipv4_hdr));
+  return _ip_send(ip_sk, m_buf, iph, eh, next_proto_id, total_length);
 }

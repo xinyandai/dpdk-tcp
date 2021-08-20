@@ -19,6 +19,7 @@
 
 ///  time to live
 uint8_t ttl;
+uint16_t xy_mtu;
 uint32_t xy_this_ip;
 rte_ether_addr xy_this_mac;
 
@@ -44,6 +45,7 @@ int xy_dev_port_init(struct rte_mempool *buf_pool,
       .txmode = {.mq_mode = ETH_MQ_TX_NONE},
   };
 
+  xy_return_if(rte_eth_dev_get_mtu(port, &xy_mtu), -1);
   xy_return_if(port >= rte_eth_dev_count_avail(), -1);
   // Configure the Ethernet device.
   xy_return_if(rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf) != 0,

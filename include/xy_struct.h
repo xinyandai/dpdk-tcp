@@ -58,6 +58,7 @@ typedef struct  {
 typedef struct {
   rte_be32_t    ip_src;
   rte_be32_t    ip_dst;
+  uint16_t      id;
   xy_eth_socket eth_socket;
 } xy_ip_socket;
 

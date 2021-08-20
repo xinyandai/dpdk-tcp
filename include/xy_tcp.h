@@ -72,7 +72,12 @@ int tcp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
 int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
              struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
              struct rte_ether_hdr *eh, uint8_t tcp_flags, rte_be32_t sent_seq,
-             rte_be32_t recv_ack);
+             rte_be32_t recv_ack, uint16_t data_len);
+
+int tcp_forward(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
+                struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
+                struct rte_ether_hdr *eh, uint8_t tcp_flags,
+                rte_be32_t sent_seq, rte_be32_t recv_ack);
 /**
 struct deleted_tcp_sock {
   struct sock sk;

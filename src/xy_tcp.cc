@@ -12,10 +12,10 @@ int port_register(uint16_t port) { return 0; }
  */
 static int check_tcp_hdr(struct rte_tcp_hdr *tcp_h) { return 0; }
 
-int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
-             struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
-             struct rte_ether_hdr *eh, uint8_t tcp_flags, rte_be32_t sent_seq,
-             rte_be32_t recv_ack) {
+int tcp_forward(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
+                struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
+                struct rte_ether_hdr *eh, uint8_t tcp_flags,
+                rte_be32_t sent_seq, rte_be32_t recv_ack) {
   tcp_h->dst_port = tcp_sk->port_dst;
   tcp_h->src_port = tcp_sk->port_src;
   tcp_h->sent_seq = sent_seq;
@@ -25,8 +25,24 @@ int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
   tcp_h->rx_win = 0;   // TODO
   tcp_h->cksum = 0;    // TODO
   tcp_h->tcp_urp = 0;  // TODO
+  return ip_forward(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP);
+}
 
-  return ip_send(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP);
+int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
+             struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
+             struct rte_ether_hdr *eh, uint8_t tcp_flags, rte_be32_t sent_seq,
+             rte_be32_t recv_ack, uint16_t data_len) {
+  tcp_h->dst_port = tcp_sk->port_dst;
+  tcp_h->src_port = tcp_sk->port_src;
+  tcp_h->sent_seq = sent_seq;
+  tcp_h->recv_ack = recv_ack;
+  tcp_h->data_off = 0;  // TODO
+  tcp_h->tcp_flags = tcp_flags;
+  tcp_h->rx_win = 0;   // TODO
+  tcp_h->cksum = 0;    // TODO
+  tcp_h->tcp_urp = 0;  // TODO
+  return ip_send(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP,
+                 data_len + sizeof(struct rte_tcp_hdr));
 }
 
 /**
@@ -47,12 +63,12 @@ static inline int state_tcp_close(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
     return 0;
   } else {
     if (tcp_flags & RTE_TCP_ACK_FLAG) {
-      return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
-                      tcp_h->recv_ack, 0);
+      return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
+                         tcp_h->recv_ack, 0);
     } else {
-      return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh,
-                      RTE_TCP_RST_FLAG | RTE_TCP_ACK_FLAG, 0,
-                      tcp_h->sent_seq + 1);
+      return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh,
+                         RTE_TCP_RST_FLAG | RTE_TCP_ACK_FLAG, 0,
+                         tcp_h->sent_seq + 1);
     }
   }
 }
@@ -78,8 +94,8 @@ static inline int state_tcp_listen(xy_tcp_socket *tcp_sk,
 
   if (tcp_flags & RTE_TCP_ACK_FLAG) {  // second check for an ACK
     // send <SEQ=SEG.ACK><CTL=RST> for ACK
-    return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
-                    tcp_h->recv_ack, 0);
+    return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
+                       tcp_h->recv_ack, 0);
   }
 
   if (tcp_flags & RTE_TCP_SYN_FLAG) {  // third check for a SYN
@@ -98,8 +114,8 @@ static inline int state_tcp_listen(xy_tcp_socket *tcp_sk,
 
     syn_recv_tcp_sock_enqueue(tcp_sk);
 
-    return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, tcp_flags, sent_seq,
-                    recv_ack);
+    return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, tcp_flags, sent_seq,
+                       recv_ack);
   }
 
   rte_pktmbuf_free(m_buf);
@@ -122,8 +138,8 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
         rte_pktmbuf_free(m_buf);
         return 0;
       } else {  // send <SEQ=SEG.ACK><CTL=RST>
-        return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
-                        tcp_h->recv_ack, 0);
+        return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
+                           tcp_h->recv_ack, 0);
       }
     }
   }
@@ -160,15 +176,15 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
       syn_recv_tcp_sock_dequeue(tcp_sk);
       tcp_sk->state = TCP_ESTABLISHED;
       established_tcp_sock_enqueue(tcp_sk);
-      return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                      tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
+      return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
+                         tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
     }
 
     tcp_sk->state = TCP_SYN_RECEIVED;
     syn_recv_tcp_sock_enqueue(tcp_sk);
-    return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh,
-                    RTE_TCP_ACK_FLAG | RTE_TCP_SYN_FLAG, tcp_sk->tcb.iss,
-                    tcp_sk->tcb.rcv_nxt);
+    return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh,
+                       RTE_TCP_ACK_FLAG | RTE_TCP_SYN_FLAG, tcp_sk->tcb.iss,
+                       tcp_sk->tcb.rcv_nxt);
   }
 
   rte_pktmbuf_free(m_buf);
@@ -221,8 +237,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       rte_pktmbuf_free(m_buf);
       return 0;
     } else {  // send <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
-      return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                      tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
+      return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
+                         tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
     }
   }
 
@@ -268,8 +284,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     case TCP_SYN_RECEIVED:
       if xy_unlikely (tcp_sk->tcb.snd_una < tcp_h->recv_ack ||
                       tcp_h->recv_ack > tcp_sk->tcb.snd_nxt) {
-        return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
-                        tcp_h->recv_ack, 0);
+        return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
+                           tcp_h->recv_ack, 0);
       } else {
         syn_recv_tcp_sock_dequeue(tcp_sk);
         tcp_sk->state = TCP_ESTABLISHED;
@@ -376,8 +392,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
         break;
     }
     tcp_sk->tcb.rcv_nxt = tcp_h->sent_seq + 1;
-    return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                    tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
+    return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
+                       tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
   }
 
   return 0;
