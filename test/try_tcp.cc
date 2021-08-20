@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
   uint16_t tx_rings = 1;
   uint16_t nb_rxd = 128;
   uint16_t nb_txd = 512;
-  xy_dev_port_init(buf_pool, &xy_this_mac, port, rx_rings, tx_rings,
-                   nb_rxd, nb_txd);
+  xy_dev_port_init(buf_pool, &xy_this_mac, port, rx_rings, tx_rings, nb_rxd,
+                   nb_txd);
   return 0;
 }

@@ -25,16 +25,14 @@ tcp_sock_t xy_socket(int domain, int type, int protocol) {
 }
 
 int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port) {
-  return_errno_if(tcp_sk == NULL, EBADF, -1,
-                  "the tcp_socket pointer is NULL");
-  return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF,
-                  -1, "the tcp socket id is invalid");
+  return_errno_if(tcp_sk == NULL, EBADF, -1, "the tcp_socket pointer is NULL");
+  return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF, -1,
+                  "the tcp socket id is invalid");
   return_errno_if(port < 0 || port >= 65536 - 1, EINVAL, -1,
                   "invalid port number");
 
   int register_ret = port_register(port);
-  return_errno_if(register_ret != 0, EBADF, register_ret,
-                  "port is registered");
+  return_errno_if(register_ret != 0, EBADF, register_ret, "port is registered");
 
   tcp_sk->ip_socket.ip_src = ip;
   tcp_sk->port_src = port;
@@ -43,10 +41,9 @@ int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port) {
 }
 
 int xy_listen(tcp_sock_t tcp_sk, int backlog) {
-  return_errno_if(tcp_sk == NULL, EBADF, -1,
-                  "the tcp_socket pointer is NULL");
-  return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF,
-                  -1, "the tcp socket id is invalid");
+  return_errno_if(tcp_sk == NULL, EBADF, -1, "the tcp_socket pointer is NULL");
+  return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF, -1,
+                  "the tcp socket id is invalid");
   return_errno_if(tcp_sk->state != TCP_CLOSE, EINVAL, -1,
                   "cannot listen when TCP_CLOSE");
 
@@ -54,12 +51,11 @@ int xy_listen(tcp_sock_t tcp_sk, int backlog) {
   return 0;
 }
 
-tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip,
-                     uint16_t *port) {
+tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port) {
   return_errno_if(tcp_sk == NULL, EBADF, NULL,
                   "the tcp_socket pointer is NULL");
-  return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF,
-                  NULL, "the tcp socket id is invalid");
+  return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF, NULL,
+                  "the tcp socket id is invalid");
   return_errno_if(tcp_sk->state != TCP_LISTEN, EINVAL, NULL,
                   "cannot listen when state is not TCP_LISTEN");
   // TODO
@@ -70,8 +66,7 @@ ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags) {
   return 0;
 }
 
-ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len,
-                int flags) {
+ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len, int flags) {
   return 0;
 }
 

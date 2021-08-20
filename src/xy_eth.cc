@@ -14,8 +14,7 @@ int eth_send(xy_eth_socket *eth_sk, struct rte_mbuf *m_buf,
 
 int eth_recv(struct rte_mbuf *buf) {
   int len = rte_pktmbuf_data_len(buf);
-  struct rte_ether_hdr *eh =
-      rte_pktmbuf_mtod(buf, struct rte_ether_hdr *);
+  struct rte_ether_hdr *eh = rte_pktmbuf_mtod(buf, struct rte_ether_hdr *);
 
   if (eh->ether_type ==
       rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {  // IPv4 protocol

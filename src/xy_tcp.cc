@@ -14,8 +14,8 @@ static int check_tcp_hdr(struct rte_tcp_hdr *tcp_h) { return 0; }
 
 int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
              struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
-             struct rte_ether_hdr *eh, uint8_t tcp_flags,
-             rte_be32_t sent_seq, rte_be32_t recv_ack) {
+             struct rte_ether_hdr *eh, uint8_t tcp_flags, rte_be32_t sent_seq,
+             rte_be32_t recv_ack) {
   tcp_h->dst_port = tcp_sk->port_dst;
   tcp_h->src_port = tcp_sk->port_src;
   tcp_h->sent_seq = sent_seq;
@@ -37,8 +37,7 @@ int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
  * @param eh
  * @return
  */
-static inline int state_tcp_close(xy_tcp_socket *tcp_sk,
-                                  struct rte_mbuf *m_buf,
+static inline int state_tcp_close(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
                                   struct rte_tcp_hdr *tcp_h,
                                   struct rte_ipv4_hdr *iph,
                                   struct rte_ether_hdr *eh) {
@@ -99,8 +98,8 @@ static inline int state_tcp_listen(xy_tcp_socket *tcp_sk,
 
     syn_recv_tcp_sock_enqueue(tcp_sk);
 
-    return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, tcp_flags,
-                    sent_seq, recv_ack);
+    return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, tcp_flags, sent_seq,
+                    recv_ack);
   }
 
   rte_pktmbuf_free(m_buf);
@@ -123,8 +122,8 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
         rte_pktmbuf_free(m_buf);
         return 0;
       } else {  // send <SEQ=SEG.ACK><CTL=RST>
-        return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh,
-                        RTE_TCP_RST_FLAG, tcp_h->recv_ack, 0);
+        return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
+                        tcp_h->recv_ack, 0);
       }
     }
   }
@@ -168,8 +167,8 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
     tcp_sk->state = TCP_SYN_RECEIVED;
     syn_recv_tcp_sock_enqueue(tcp_sk);
     return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh,
-                    RTE_TCP_ACK_FLAG | RTE_TCP_SYN_FLAG,
-                    tcp_sk->tcb.iss, tcp_sk->tcb.rcv_nxt);
+                    RTE_TCP_ACK_FLAG | RTE_TCP_SYN_FLAG, tcp_sk->tcb.iss,
+                    tcp_sk->tcb.rcv_nxt);
   }
 
   rte_pktmbuf_free(m_buf);
@@ -184,8 +183,7 @@ static inline int state_tcp_handle_ack(xy_tcp_socket *tcp_sk,
     // TODO Remove acknowledged segments on the retransmission queue
     if (tcp_sk->tcb.snd_wl1 < tcp_h->sent_seq ||
         (tcp_sk->tcb.snd_wl1 =
-             tcp_h->sent_seq &&
-             tcp_sk->tcb.snd_wl2 <= tcp_h->recv_ack)) {
+             tcp_h->sent_seq && tcp_sk->tcb.snd_wl2 <= tcp_h->recv_ack)) {
       tcp_sk->tcb.snd_wnd = rte_be_to_cpu_16(tcp_h->rx_win);  // TODO
       tcp_sk->tcb.snd_wl1 = tcp_h->sent_seq;
       tcp_sk->tcb.snd_wl2 = tcp_h->recv_ack;
@@ -211,12 +209,11 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
   //  first check sequence number
   int acceptable;
   if (tcp_sk->tcb.rcv_wnd == 0) {
-    acceptable = tcp_flags & (RTE_TCP_ACK_FLAG | RTE_TCP_URG_FLAG |
-                              RTE_TCP_RST_FLAG);
-  } else {
     acceptable =
-        tcp_h->sent_seq < tcp_sk->tcb.rcv_nxt ||
-        tcp_h->sent_seq > tcp_sk->tcb.rcv_nxt + tcp_sk->tcb.rcv_wnd;
+        tcp_flags & (RTE_TCP_ACK_FLAG | RTE_TCP_URG_FLAG | RTE_TCP_RST_FLAG);
+  } else {
+    acceptable = tcp_h->sent_seq < tcp_sk->tcb.rcv_nxt ||
+                 tcp_h->sent_seq > tcp_sk->tcb.rcv_nxt + tcp_sk->tcb.rcv_wnd;
   }
 
   if xy_unlikely (!acceptable) {
@@ -271,8 +268,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     case TCP_SYN_RECEIVED:
       if xy_unlikely (tcp_sk->tcb.snd_una < tcp_h->recv_ack ||
                       tcp_h->recv_ack > tcp_sk->tcb.snd_nxt) {
-        return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh,
-                        RTE_TCP_RST_FLAG, tcp_h->recv_ack, 0);
+        return tcp_send(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
+                        tcp_h->recv_ack, 0);
       } else {
         syn_recv_tcp_sock_dequeue(tcp_sk);
         tcp_sk->state = TCP_ESTABLISHED;
@@ -308,8 +305,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       break;
     case TCP_LAST_ACK:
       if (tcp_h->recv_ack ==
-          tcp_sk->tcb.snd_nxt) {  // TODO Way to check whether FIN is
-                                  // acknowledged?
+          tcp_sk->tcb.snd_nxt) {    // TODO Way to check whether FIN is
+                                    // acknowledged?
         tcp_sk->state = TCP_CLOSE;  // TODO clean it
       }
       break;
@@ -365,9 +362,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
           tcp_sk->state = TCP_CLOSING;
         }
       case TCP_FIN_WAIT_2:
-        tcp_sk->state =
-            TCP_TIME_WAIT;  // TODO Start the time-wait timer, turn
-                            // off the other timers.
+        tcp_sk->state = TCP_TIME_WAIT;  // TODO Start the time-wait timer, turn
+                                        // off the other timers.
         break;
       case TCP_TIME_WAIT:
         // TODO Restart the time-wait timer,

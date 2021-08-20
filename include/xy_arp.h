@@ -5,7 +5,6 @@
 #ifndef DPDK_TCP_INCLUDE_XY_ARP_H_
 #define DPDK_TCP_INCLUDE_XY_ARP_H_
 
-int arp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
-             int len);
+int arp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh, int len);
 
-#endif //DPDK_TCP_INCLUDE_XY_ARP_H_
+#endif  // DPDK_TCP_INCLUDE_XY_ARP_H_

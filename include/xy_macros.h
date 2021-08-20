@@ -10,11 +10,11 @@
 #define XY_MAX_TCP 65536
 
 #if defined(__GNUC__) || defined(__clang__)
-#define xy_unlikely(x)     (__builtin_expect(!!(x), 0))
-#define xy_likely(x)       (__builtin_expect(!!(x), 1))
+#define xy_unlikely(x) (__builtin_expect(!!(x), 0))
+#define xy_likely(x)   (__builtin_expect(!!(x), 1))
 #else
-#define xy_unlikely(x)     (x)
-#define xy_likely(x)       (x)
+#define xy_unlikely(x) (x)
+#define xy_likely(x) (x)
 #endif
 
 #define xy_return_if(condition, ret) \
@@ -45,15 +45,13 @@
     }                                 \
   } while (0)
 
-#define return_errno_if(condition, set_errno, ret, ...)     \
-  do {                                                      \
-    if (xy_unlikely(condition)) {                           \
-      errno = set_errno;                                    \
-      printf(__VA_ARGS__);                                  \
-      return ret;                                           \
-    }                                                       \
+#define return_errno_if(condition, set_errno, ret, ...) \
+  do {                                                  \
+    if (xy_unlikely(condition)) {                       \
+      errno = set_errno;                                \
+      printf(__VA_ARGS__);                              \
+      return ret;                                       \
+    }                                                   \
   } while (0)
 
-
-
-#endif //DPDK_TCP_INCLUDE_XY_MACROS_H_
+#endif  // DPDK_TCP_INCLUDE_XY_MACROS_H_

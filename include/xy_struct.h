@@ -5,8 +5,6 @@
 #ifndef DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #define DPDK_TCP_INCLUDE_XY_STRUCT_H_
 
-#include "xy_tcp.h"
-
 struct tcb {
   uint32_t snd_una; /* oldest unacknowledged sequence number */
   uint32_t snd_nxt; /* next sequence number to be sent */
@@ -58,19 +56,19 @@ typedef struct  {
 } xy_eth_socket;
 
 typedef struct {
-  xy_eth_socket eth_socket;
   rte_be32_t    ip_src;
   rte_be32_t    ip_dst;
+  xy_eth_socket eth_socket;
 } xy_ip_socket;
 
 typedef struct {
-  xy_ip_socket  ip_socket;
   uint32_t      id;
   tcp_states    state;
   uint8_t       passive;
   rte_be16_t    port_src;
   rte_be16_t    port_dst;
   struct tcb    tcb;
+  xy_ip_socket  ip_socket;
 } xy_tcp_socket;
 
 
