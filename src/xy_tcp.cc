@@ -12,19 +12,27 @@ int port_register(uint16_t port) { return 0; }
  */
 static int check_tcp_hdr(struct rte_tcp_hdr *tcp_h) { return 0; }
 
-int tcp_forward(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
-                struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
-                struct rte_ether_hdr *eh, uint8_t tcp_flags,
-                rte_be32_t sent_seq, rte_be32_t recv_ack) {
+static inline void tcp_hdr_setup(xy_tcp_socket *tcp_sk,
+                                 struct rte_tcp_hdr *tcp_h,
+                                 struct rte_ipv4_hdr *iph, uint8_t tcp_flags,
+                                 rte_be32_t sent_seq, rte_be32_t recv_ack) {
   tcp_h->dst_port = tcp_sk->port_dst;
   tcp_h->src_port = tcp_sk->port_src;
   tcp_h->sent_seq = sent_seq;
   tcp_h->recv_ack = recv_ack;
-  tcp_h->data_off = 0;  // TODO
+  tcp_h->data_off = sizeof(struct rte_tcp_hdr) / 4;
   tcp_h->tcp_flags = tcp_flags;
-  tcp_h->rx_win = 0;   // TODO
-  tcp_h->cksum = 0;    // TODO
+  tcp_h->rx_win = tcp_sk->tcb.rcv_wnd;
+  tcp_h->cksum = 0;
+  tcp_h->cksum = rte_ipv4_udptcp_cksum(iph, tcp_h);
   tcp_h->tcp_urp = 0;  // TODO
+}
+
+int tcp_forward(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
+                struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
+                struct rte_ether_hdr *eh, uint8_t tcp_flags,
+                rte_be32_t sent_seq, rte_be32_t recv_ack) {
+  tcp_hdr_setup(tcp_sk, tcp_h, iph, tcp_flags, sent_seq, recv_ack);
   return ip_forward(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP);
 }
 
@@ -32,27 +40,11 @@ int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
              struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
              struct rte_ether_hdr *eh, uint8_t tcp_flags, rte_be32_t sent_seq,
              rte_be32_t recv_ack, uint16_t data_len) {
-  tcp_h->dst_port = tcp_sk->port_dst;
-  tcp_h->src_port = tcp_sk->port_src;
-  tcp_h->sent_seq = sent_seq;
-  tcp_h->recv_ack = recv_ack;
-  tcp_h->data_off = 0;  // TODO
-  tcp_h->tcp_flags = tcp_flags;
-  tcp_h->rx_win = 0;   // TODO
-  tcp_h->cksum = 0;    // TODO
-  tcp_h->tcp_urp = 0;  // TODO
+  tcp_hdr_setup(tcp_sk, tcp_h, iph, tcp_flags, sent_seq, recv_ack);
   return ip_send(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP,
                  data_len + sizeof(struct rte_tcp_hdr));
 }
 
-/**
- * @param tcp_sk
- * @param m_buf
- * @param tcp_h
- * @param iph
- * @param eh
- * @return
- */
 static inline int state_tcp_close(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
                                   struct rte_tcp_hdr *tcp_h,
                                   struct rte_ipv4_hdr *iph,
@@ -73,14 +65,6 @@ static inline int state_tcp_close(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
   }
 }
 
-/**
- * @param tcp_sk
- * @param m_buf
- * @param tcp_h
- * @param iph
- * @param eh
- * @return
- */
 static inline int state_tcp_listen(xy_tcp_socket *tcp_sk,
                                    struct rte_mbuf *m_buf,
                                    struct rte_tcp_hdr *tcp_h,
