@@ -39,17 +39,5 @@ static inline void list_del(list_head *elem) {
   next->prev = prev;
 }
 
-#define list_entry(ptr, type, member) \
-  ((type *)((char *)(ptr)-offsetof(type, member)))
-
-#define list_first_entry(ptr, type, member) \
-  list_entry((ptr)->next, type, member)
-
-#define list_for_each(pos, head) \
-  for (pos = (head)->next; pos != (head); pos = pos->next)
-
-#define list_for_each_safe(pos, p, head) \
-  for (pos = (head)->next, p = pos->next; pos != (head); pos = p, p = pos->next)
-
-static inline int list_empty(list_head *head) { return head->next == head; }
+static inline int list_is_empty(list_head *head) { return head->next == head; }
 #endif  // DPDK_TCP_INCLUDE_XY_LIST_H_

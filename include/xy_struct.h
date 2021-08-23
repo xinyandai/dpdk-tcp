@@ -72,6 +72,8 @@ typedef struct {
   rte_be16_t port_dst;
   struct tcb tcb;
   xy_ip_socket ip_socket;
+  struct rte_mbuf* recv_buf; ???
+  struct rte_mbuf* send_buf; ???
 } xy_tcp_socket;
 
 

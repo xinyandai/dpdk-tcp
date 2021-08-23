@@ -9,6 +9,9 @@ tcp_sock_t xy_socket(int domain, int type, int protocol) {
                      "protocol should be IPPROTO_TCP");
 
   xy_tcp_socket *tcp_sk = allocate_tcp_socket();
+  tcp_sk->id = tcp_socket_id();
+  tcp_sk->state = TCP_CLOSE;
+
   xy_return_errno_if(NULL == tcp_sk, ENFILE, NULL, "bad alloc");
   // init tcp_sk
   return tcp_sk;
@@ -41,6 +44,8 @@ int xy_listen(tcp_sock_t tcp_sk, int backlog) {
                      "cannot listen when TCP_CLOSE");
 
   tcp_sk->state = TCP_LISTEN;
+  listener_tcp_sock_enqueue(tcp_sk);
+
   return 0;
 }
 
@@ -51,8 +56,8 @@ tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port) {
                      "the tcp socket id is invalid");
   xy_return_errno_if(tcp_sk->state != TCP_LISTEN, EINVAL, NULL,
                      "cannot listen when state is not TCP_LISTEN");
-  // TODO
-  return NULL;
+
+  return take_next_established();
 }
 
 ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags) {
@@ -63,4 +68,6 @@ ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len, int flags) {
   return 0;
 }
 
-int xy_close(tcp_sock_t tcp_sk) { return 0; }
+int xy_close(tcp_sock_t tcp_sk) {
+  return 0;
+}
