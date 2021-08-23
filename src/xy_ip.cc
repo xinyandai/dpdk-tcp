@@ -39,10 +39,10 @@ int ip_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh, int len) {
       (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
   int ipv4_hdr_len = rte_ipv4_hdr_len(iph);
 
-  if (((iph->version_ihl & 0xF0) == 0x40) &&
-      ((iph->fragment_offset & rte_cpu_to_be_16(RTE_IPV4_HDR_OFFSET_MASK)) ==
-       0) &&
-      (iph->dst_addr == xy_this_ip)) {
+  if xy_likely (((iph->version_ihl & 0xF0) == 0x40) &&
+                ((iph->fragment_offset &
+                  rte_cpu_to_be_16(RTE_IPV4_HDR_OFFSET_MASK)) == 0) &&
+                (iph->dst_addr == xy_this_ip)) {
     // ipv4
     if (iph->next_proto_id == IPPROTO_TCP) {  // TCP
       return tcp_recv(m_buf, eh, iph, ipv4_hdr_len, len);

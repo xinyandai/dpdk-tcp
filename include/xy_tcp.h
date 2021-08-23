@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __XY_TCP_H__
-#define __XY_TCP_H__
+#ifndef ____DPDK_TCP_INCLUDE_XY_TCP_H__
+#define ____DPDK_TCP_INCLUDE_XY_TCP_H__
 
 #include <rte_mbuf.h>
 
@@ -60,14 +60,15 @@
 //     \ snd ACK                 +---------+delete TCB         +---------+
 //      ------------------------>|TIME WAIT|------------------>| CLOSED  |
 //                               +---------+                   +---------+
-
+//
 //                       TCP Connection State Diagram
 
-int port_register(uint16_t port);
-xy_tcp_socket *allocate_tcp_socket();
 
 int tcp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
              struct rte_ipv4_hdr *iph, int ipv4_hdr_len, int len);
+
+int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf, uint8_t tcp_flags,
+             rte_be32_t sent_seq, rte_be32_t recv_ack, uint16_t data_len);
 
 int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
              struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,

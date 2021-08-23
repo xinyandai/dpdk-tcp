@@ -1,5 +1,6 @@
-#ifndef __NTY_EPOLL_H__
-#define __NTY_EPOLL_H__
+#pragma once
+#ifndef __DPDK_TCP_INCLUDE_XY_EPOLL_H__
+#define __DPDK_TCP_INCLUDE_XY_EPOLL_H__
 
 #include <stdint.h>
 #include "nty_config.h"

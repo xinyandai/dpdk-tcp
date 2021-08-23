@@ -45,7 +45,7 @@
     }                                 \
   } while (0)
 
-#define return_errno_if(condition, set_errno, ret, ...) \
+#define xy_return_errno_if(condition, set_errno, ret, ...) \
   do {                                                  \
     if (xy_unlikely(condition)) {                       \
       errno = set_errno;                                \

@@ -17,11 +17,17 @@
 #include <signal.h>
 #include <stdint.h>
 
+#include "xy_api.h"
+
 ///  time to live
 uint8_t ttl;
 uint16_t xy_mtu;
 uint32_t xy_this_ip;
-rte_ether_addr xy_this_mac;
+struct rte_ether_addr xy_this_mac;
+
+struct rte_mempool *buf_pool;
+
+port_flag_t xy_ports_occupied[PORTS_OCCUPIED_SPACE] = {0};
 
 static void sig_handler(int sig_num) {
   if (sig_num == SIGINT) {
@@ -29,16 +35,24 @@ static void sig_handler(int sig_num) {
   } else {
     printf("\n Caught the signal number [%d]\n", sig_num);
   }
-  // exit(sig_num);
+  exit(sig_num);
 }
 
-/*
+/**
  * Initializes a given port using global settings and with the RX
  * buffers coming from the buf_pool passed as a parameter.
+ * \param buf_pool
+ * \param eth_addr
+ * \param port
+ * \param n_rx_q
+ * \param n_tx_q
+ * \param nb_rxd
+ * \param nb_txd
+ * \return
  */
 int xy_dev_port_init(struct rte_mempool *buf_pool,
                      struct rte_ether_addr *eth_addr, uint16_t port,
-                     uint16_t rx_rings, uint16_t tx_rings, uint16_t nb_rxd,
+                     uint16_t n_rx_q, uint16_t n_tx_q, uint16_t nb_rxd,
                      uint16_t nb_txd) {
   struct rte_eth_conf port_conf = {
       .rxmode = {.max_rx_pkt_len = RTE_ETHER_MAX_LEN},
@@ -48,13 +62,12 @@ int xy_dev_port_init(struct rte_mempool *buf_pool,
   xy_return_if(rte_eth_dev_get_mtu(port, &xy_mtu), -1);
   xy_return_if(port >= rte_eth_dev_count_avail(), -1);
   // Configure the Ethernet device.
-  xy_return_if(rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf) != 0,
+  xy_return_if(rte_eth_dev_configure(port, n_rx_q, n_tx_q, &port_conf) != 0,
                -1);
   xy_return_if(rte_eth_dev_adjust_nb_rx_tx_desc(port, &nb_rxd, &nb_txd) != 0,
                -1);
-
-  /* Allocate and set up 1 RX queue per Ethernet port. */
-  for (uint16_t q = 0; q < rx_rings; q++) {
+  // Allocate and set up 1 RX queue per Ethernet port.
+  for (uint16_t q = 0; q < n_rx_q; q++) {
     xy_return_if(
         rte_eth_rx_queue_setup(port, q, nb_rxd, rte_eth_dev_socket_id(port),
                                NULL, buf_pool) < 0,
@@ -72,15 +85,12 @@ int xy_dev_port_init(struct rte_mempool *buf_pool,
                 "TX IPv4 checksum: support\n");
   xy_message_if(dev_info.tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM,
                 "TX TCP  checksum: support\n");
-
-  /* Allocate and set up 1 TX queue per Ethernet port. */
-  for (uint16_t q = 0; q < tx_rings; q++) {
-    xy_return_if(
-        rte_eth_tx_queue_setup(port, q, nb_txd, rte_eth_dev_socket_id(port),
-                               &dev_info.default_txconf) < 0,
-        -1);
+  // Allocate and set up 1 TX queue per Ethernet port.
+  for (uint16_t q = 0; q < n_tx_q; q++) {
+    int ret = rte_eth_tx_queue_setup(
+        port, q, nb_txd, rte_eth_dev_socket_id(port), &dev_info.default_txconf);
+    xy_return_if(ret < 0, -1);
   }
-
   // Start the Ethernet port.
   xy_return_if(rte_eth_dev_start(port) < 0, -1);
   //  Get the port MAC address.
@@ -124,17 +134,17 @@ struct rte_mempool *xy_setup(int argc, char *argv[]) {
   return buf_pool;
 }
 
-/*
+/**
  * The lcore main. This is the main thread that does the work, reading
  * from an input port and writing to an output port.
  */
-static __attribute__((noreturn)) void lcore_main(void) {
+[[noreturn]] void lcore_main() {
   const uint16_t nb_ports = rte_eth_dev_count_total();
   // Check that the port is on the same NUMA node as the polling
   // thread for best performance.
   for (uint8_t port = 0; port < nb_ports; port++) {
-    if (rte_eth_dev_socket_id(port) > 0 &&
-        rte_eth_dev_socket_id(port) != (int)rte_socket_id())
+    if xy_unlikely (rte_eth_dev_socket_id(port) > 0 &&
+                    rte_eth_dev_socket_id(port) != (int)rte_socket_id())
       printf(
           "WARNING, port %u is on remote NUMA node to "
           "polling thread.\n\tPerformance will "
@@ -150,7 +160,9 @@ static __attribute__((noreturn)) void lcore_main(void) {
     const int port = 0;
     struct rte_mbuf *bufs[BURST_SIZE];
     const uint16_t nb_rx = rte_eth_rx_burst(port, 0, bufs, BURST_SIZE);
-    if (unlikely(nb_rx == 0)) continue;
+    if (unlikely(nb_rx == 0)) {
+      continue;
+    }
 
     for (int i = 0; i < nb_rx; i++) {
       eth_recv(bufs[i]);

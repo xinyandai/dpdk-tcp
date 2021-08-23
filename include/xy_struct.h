@@ -4,6 +4,7 @@
 #pragma once
 #ifndef DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #define DPDK_TCP_INCLUDE_XY_STRUCT_H_
+#include "xy_list.h"
 
 struct tcb {
   uint32_t snd_una; /* oldest unacknowledged sequence number */
@@ -50,29 +51,32 @@ enum tcp_states {
                        termination request. */
 };
 
-typedef struct  {
+typedef struct {
   struct rte_ether_addr mac_src;
   struct rte_ether_addr mac_dst;
 } xy_eth_socket;
 
 typedef struct {
-  rte_be32_t    ip_src;
-  rte_be32_t    ip_dst;
-  uint16_t      id;
+  rte_be32_t ip_src;
+  rte_be32_t ip_dst;
+  uint16_t id;
   xy_eth_socket eth_socket;
 } xy_ip_socket;
 
 typedef struct {
-  uint32_t      id;
-  tcp_states    state;
-  uint8_t       passive;
-  rte_be16_t    port_src;
-  rte_be16_t    port_dst;
-  struct tcb    tcb;
-  xy_ip_socket  ip_socket;
+  list_head list;
+  uint32_t id;
+  tcp_states state;
+  uint8_t passive;
+  rte_be16_t port_src;
+  rte_be16_t port_dst;
+  struct tcb tcb;
+  xy_ip_socket ip_socket;
 } xy_tcp_socket;
 
 
+void recv_enqueue(xy_tcp_socket* tcp_sk, rte_mbuf* buf) {
 
+}
 
-#endif //DPDK_TCP_INCLUDE_XY_STRUCT_H_
+#endif  // DPDK_TCP_INCLUDE_XY_STRUCT_H_
