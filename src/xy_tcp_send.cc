@@ -1,8 +1,7 @@
 #include "xy_api.h"
 
 static inline int tcp_send_one_buf(xy_tcp_socket *tcp_sk,
-                                   struct rte_mbuf *buf) {
-  struct rte_mbuf *m_buf = rte_pktmbuf_alloc(buf_pool);
+                                   struct rte_mbuf *m_buf) {
   struct rte_ether_hdr *eh = rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
   auto iph = (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
   auto tcp_h = (struct rte_tcp_hdr *)((unsigned char *)(iph) + XY_IP_HDR_LEN);

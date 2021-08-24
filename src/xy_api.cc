@@ -133,6 +133,9 @@ ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags) {
 ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len, int flags) {
   while (len > 0) {
     struct rte_mbuf *m_buf = rte_pktmbuf_alloc(buf_pool);
+    rte_pktmbuf_append(m_buf, RTE_ETHER_MTU);
+    xy_return_errno_if(m_buf == NULL, EBADF, 0,
+                       "Failed to append MTU space in m_buf");
     struct rte_ether_hdr *eh = rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
     auto iph =
         (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
@@ -142,6 +145,9 @@ ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len, int flags) {
     uint16_t data_len = xy_min(XY_TCP_MAX_DATA_LEN, len);
     uint16_t ip_len = data_len + XY_TCP_HDR_LEN + XY_IP_HDR_LEN;
     rte_memcpy(tcp_data, buf, data_len);
+
+    m_buf->pkt_len = m_buf->data_len =
+        ip_len + XY_IP_HDR_LEN + RTE_ETHER_HDR_LEN;
 
     eth_setup(&tcp_sk->ip_socket.eth_socket, eh,
               rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4));

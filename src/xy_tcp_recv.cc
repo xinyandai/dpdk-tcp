@@ -1,7 +1,5 @@
 #include "xy_api.h"
 
-
-
 /** check ip address and port
  * \param tcp_h
  * \return 0 if valid
@@ -162,6 +160,8 @@ static inline int state_tcp_handle_data(xy_tcp_socket *tcp_sk,
                                         struct rte_tcp_hdr *tcp_h) {
   recv_enqueue(tcp_sk, buf);
   // TODO window management
+  // TODO retransmission
+  tcp_sk->tcb.rcv_nxt = tcp_h->sent_seq + 1;
   // <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
   struct rte_mbuf *reply_buf = rte_pktmbuf_alloc(buf_pool);
   tcp_send(tcp_sk, reply_buf, RTE_TCP_ACK_FLAG, tcp_sk->tcb.snd_nxt,
@@ -170,12 +170,13 @@ static inline int state_tcp_handle_data(xy_tcp_socket *tcp_sk,
 }
 
 /**
- * @param tcp_sk
- * @param m_buf
- * @param tcp_h
- * @param iph
- * @param eh
- * @return
+ *
+ * \param tcp_sk
+ * \param m_buf
+ * \param tcp_h
+ * \param iph
+ * \param eh
+ * \return
  */
 static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
                                       struct rte_mbuf *m_buf,
@@ -287,6 +288,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
         tcp_sk->state = TCP_CLOSE;  // TODO clean it
       }
       break;
+
     case TCP_TIME_WAIT:
       break;
   }
