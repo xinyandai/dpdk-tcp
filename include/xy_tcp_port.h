@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 typedef uint8_t port_flag_t;
-#define PORTS_OCCUPIED_SPACE 1 << 16 / (8 * sizeof(port_flag_t))
+#define PORTS_OCCUPIED_SPACE XY_MAX_TCP / (8 * sizeof(port_flag_t))
 extern port_flag_t xy_ports_occupied[PORTS_OCCUPIED_SPACE];
 
 static inline uint16_t port_flag_index(uint16_t port) {

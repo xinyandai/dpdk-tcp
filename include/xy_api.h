@@ -56,6 +56,7 @@ tcp_sock_t xy_socket(int domain, int type, int protocol);
 int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port);
 int xy_listen(tcp_sock_t tcp_sk, int backlog);
 tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
+tcp_sock_t connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
 ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags);
 ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len);
 int xy_close(tcp_sock_t tcp_sk);
@@ -64,6 +65,7 @@ int socket(int domain, int type, int protocol);
 int bind(int sock_id, const struct sockaddr *addr, socklen_t addr_len);
 int listen(int sock_id, int backlog);
 int accept(int sock_id, struct sockaddr *addr, socklen_t *addr_len);
+int connect(int sock_id, const struct sockaddr *addr, socklen_t addr_len);
 ssize_t recv(int sock_id, void *buf, size_t len, int flags);
 ssize_t send(int sock_id, const void *buf, size_t len, int flags);
 

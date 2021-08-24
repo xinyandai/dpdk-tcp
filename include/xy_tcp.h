@@ -63,9 +63,15 @@
 //
 //                       TCP Connection State Diagram
 
-
 int tcp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
              struct rte_ipv4_hdr *iph, int ipv4_hdr_len, int len);
+
+int tcp_setup(xy_tcp_socket *tcp_sk, struct rte_tcp_hdr *tcp_h,
+              uint8_t tcp_flags);
+
+int tcp_ready(struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
+              uint32_t sent_seq, uint32_t recv_ack);
+
 
 int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf, uint8_t tcp_flags,
              rte_be32_t sent_seq, rte_be32_t recv_ack, uint16_t data_len);
@@ -79,36 +85,9 @@ int tcp_forward(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
                 struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
                 struct rte_ether_hdr *eh, uint8_t tcp_flags,
                 rte_be32_t sent_seq, rte_be32_t recv_ack);
-/**
-struct deleted_tcp_sock {
-  struct sock sk;
-  int fd;
-  uint16_t tcp_header_len;
-  struct tcb tcb;
-  uint8_t flags;
-  uint8_t backoff;
-  int32_t srtt;
-  int32_t rttvar;
-  uint32_t rto;
-  struct timer *retransmit;
-  struct timer *delack;
-  struct timer *keepalive;
-  struct timer *linger;
-  uint8_t delacks;
-  uint16_t rmss;
-  uint16_t smss;  // SENDER MAXIMUM SEGMENT SIZE (SMSS): The size does not
-                  // include the TCP/IP headers and options.
-  uint16_t cwnd;  // RECEIVER MAXIMUM SEGMENT SIZE (RMSS)
-  uint32_t inflight;
 
-  uint8_t sackok;
-  uint8_t sacks_allowed;
-  uint8_t sacklen;
-  struct tcp_sack_block sacks[4];
 
-  uint8_t tsopt;
+int tcp_send_buf(xy_tcp_socket *tcp_sk);
 
-  struct sk_buff_head ofo_queue; // Out-of-order queue
-}
-*/
+
 #endif

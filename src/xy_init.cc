@@ -154,18 +154,17 @@ struct rte_mempool *xy_setup(int argc, char *argv[]) {
 
   printf("\nCore %u forwarding packets. [Ctrl+C to quit]\n", rte_lcore_id());
 
-  /* Run until the application is quit or killed. */
+  const int port = 0;
+  /// Run until the application is quit or killed.
   for (;;) {
-    /* Get burst of RX packets, from first port of pair. */
-    const int port = 0;
-    struct rte_mbuf *bufs[BURST_SIZE];
-    const uint16_t nb_rx = rte_eth_rx_burst(port, 0, bufs, BURST_SIZE);
-    if (unlikely(nb_rx == 0)) {
-      continue;
-    }
+    /// Get burst of RX packets, from first port of pair.
+    struct rte_mbuf *buffers[BURST_SIZE];
+    const uint16_t nb_rx = rte_eth_rx_burst(port, 0, buffers, BURST_SIZE);
 
     for (int i = 0; i < nb_rx; i++) {
-      eth_recv(bufs[i]);
+      eth_recv(buffers[i]);
     }
+
+    established_send_buffers();
   }
 }

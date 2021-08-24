@@ -7,7 +7,13 @@
 #define DPDK_TCP_INCLUDE_XY_MACROS_H_
 #include <stdint.h>
 
-#define XY_MAX_TCP 65536
+#define XY_MAX_TCP (1 << 16)
+
+#define XY_IP_HDR_LEN sizeof(struct rte_ipv4_hdr)
+#define XY_TCP_HDR_LEN sizeof(struct rte_tcp_hdr)
+#define XY_TCP_MAX_DATA_LEN RTE_ETHER_MTU - XY_IP_HDR_LEN - XY_TCP_HDR_LEN
+#define xy_max(a, b) ( (a) > (b) ? (a) : (b) )
+#define xy_min(a, b) ( (a) < (b) ? (a) : (b) )
 
 #if defined(__GNUC__) || defined(__clang__)
 #define xy_unlikely(x) (__builtin_expect(!!(x), 0))

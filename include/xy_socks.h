@@ -12,11 +12,15 @@
 uint32_t tcp_socket_id();
 xy_tcp_socket *allocate_tcp_socket();
 
+void established_send_buffers();
+
 void syn_recv_tcp_sock_enqueue(xy_tcp_socket *tcp_sock);
 
 void syn_recv_tcp_sock_dequeue(xy_tcp_socket *tcp_sock);
 
-xy_tcp_socket *take_next_established();
+xy_tcp_socket *established_take_next();
+
+xy_tcp_socket *established_retrieve(xy_tcp_socket * tcp_sk);
 
 void established_tcp_sock_enqueue(xy_tcp_socket *tcp_sock);
 

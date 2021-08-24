@@ -12,8 +12,10 @@
 
 #include "xy_struct.h"
 
-
 int eth_recv(struct rte_mbuf *buf);
+
+int eth_setup(xy_eth_socket *eth_sk, struct rte_ether_hdr *eh,
+              uint16_t ether_type);
 
 int eth_send(xy_eth_socket *eth_sk, struct rte_mbuf *m_buf,
              struct rte_ether_hdr *eh, uint16_t ether_type);
