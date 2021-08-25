@@ -6,7 +6,7 @@ static inline int tcp_send_one_buf(xy_tcp_socket *tcp_sk,
   auto iph = (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
   auto tcp_h = (struct rte_tcp_hdr *)((unsigned char *)(iph) + XY_IP_HDR_LEN);
 
-  tcp_ready(tcp_h, iph, tcp_sk->tcb.snd_nxt++, 0);
+  tcp_ready(tcp_h, iph, tcp_sk->tcb->snd_nxt++, 0);
   return ip_forward(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP);
 }
 

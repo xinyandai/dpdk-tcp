@@ -47,15 +47,15 @@ static inline int state_tcp_listen(xy_tcp_socket *tcp_sk,
 
   if (tcp_flags & RTE_TCP_SYN_FLAG) {  // third check for a SYN
     // TODO check security
-    tcp_sk->tcb.rcv_nxt = tcp_h->sent_seq + 1;
-    tcp_sk->tcb.irs = tcp_h->sent_seq;
+    tcp_sk->tcb->rcv_nxt = tcp_h->sent_seq + 1;
+    tcp_sk->tcb->irs = tcp_h->sent_seq;
 
     uint8_t tcp_flags = RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG;
-    rte_be32_t sent_seq = tcp_sk->tcb.iss;
-    rte_be32_t recv_ack = tcp_sk->tcb.rcv_nxt;
+    rte_be32_t sent_seq = tcp_sk->tcb->iss;
+    rte_be32_t recv_ack = tcp_sk->tcb->rcv_nxt;
 
-    tcp_sk->tcb.snd_nxt = tcp_sk->tcb.iss + 1;
-    tcp_sk->tcb.snd_una = tcp_sk->tcb.iss;
+    tcp_sk->tcb->snd_nxt = tcp_sk->tcb->iss + 1;
+    tcp_sk->tcb->snd_una = tcp_sk->tcb->iss;
 
     tcp_sk->state = TCP_SYN_RECEIVED;
 
@@ -79,8 +79,8 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
     // If SND.UNA =< SEG.ACK =< SND.NXT then the  ACK is acceptable.
     // If SEG.ACK =< ISS or SEG.ACK > SND.NXT, send a reset
     // (unless the RST bit is set, if so drop the segment and return)
-    if xy_unlikely (tcp_h->recv_ack <= tcp_sk->tcb.iss ||
-                    tcp_h->recv_ack > tcp_sk->tcb.snd_nxt) {
+    if xy_unlikely (tcp_h->recv_ack <= tcp_sk->tcb->iss ||
+                    tcp_h->recv_ack > tcp_sk->tcb->snd_nxt) {
       if xy_unlikely (tcp_flags & RTE_TCP_RST_FLAG) {
         rte_pktmbuf_free(m_buf);
         return 0;
@@ -111,27 +111,27 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
 
   // fourth check the SYN bit
   if (tcp_flags & RTE_TCP_SYN_FLAG) {
-    tcp_sk->tcb.rcv_nxt = tcp_h->sent_seq + 1;
-    tcp_sk->tcb.irs = tcp_h->sent_seq;
+    tcp_sk->tcb->rcv_nxt = tcp_h->sent_seq + 1;
+    tcp_sk->tcb->irs = tcp_h->sent_seq;
     if ((tcp_flags & RTE_TCP_ACK_FLAG)) {
-      tcp_sk->tcb.snd_una = tcp_h->recv_ack;
+      tcp_sk->tcb->snd_una = tcp_h->recv_ack;
       // TODO any segments on the retransmission queue which
       //        are thereby acknowledged should be removed.
     }
 
-    if (tcp_sk->tcb.snd_una > tcp_sk->tcb.iss) {
+    if (tcp_sk->tcb->snd_una > tcp_sk->tcb->iss) {
       syn_recv_tcp_sock_dequeue(tcp_sk);
       tcp_sk->state = TCP_ESTABLISHED;
       established_tcp_sock_enqueue(tcp_sk);
       return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                         tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
+                         tcp_sk->tcb->snd_nxt, tcp_sk->tcb->rcv_nxt);
     }
 
     tcp_sk->state = TCP_SYN_RECEIVED;
     syn_recv_tcp_sock_enqueue(tcp_sk);
     return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh,
-                       RTE_TCP_ACK_FLAG | RTE_TCP_SYN_FLAG, tcp_sk->tcb.iss,
-                       tcp_sk->tcb.rcv_nxt);
+                       RTE_TCP_ACK_FLAG | RTE_TCP_SYN_FLAG, tcp_sk->tcb->iss,
+                       tcp_sk->tcb->rcv_nxt);
   }
 
   rte_pktmbuf_free(m_buf);
@@ -140,16 +140,16 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
 
 static inline int state_tcp_handle_ack(xy_tcp_socket *tcp_sk,
                                        struct rte_tcp_hdr *tcp_h) {
-  if xy_likely (tcp_sk->tcb.snd_una < tcp_h->recv_ack &&
-                tcp_h->recv_ack <= tcp_sk->tcb.snd_nxt) {
-    tcp_sk->tcb.snd_una = tcp_h->recv_ack;
+  if xy_likely (tcp_sk->tcb->snd_una < tcp_h->recv_ack &&
+                tcp_h->recv_ack <= tcp_sk->tcb->snd_nxt) {
+    tcp_sk->tcb->snd_una = tcp_h->recv_ack;
     // TODO Remove acknowledged segments on the retransmission queue
-    if (tcp_sk->tcb.snd_wl1 < tcp_h->sent_seq ||
-        (tcp_sk->tcb.snd_wl1 =
-             tcp_h->sent_seq && tcp_sk->tcb.snd_wl2 <= tcp_h->recv_ack)) {
-      tcp_sk->tcb.snd_wnd = rte_be_to_cpu_16(tcp_h->rx_win);  // TODO
-      tcp_sk->tcb.snd_wl1 = tcp_h->sent_seq;
-      tcp_sk->tcb.snd_wl2 = tcp_h->recv_ack;
+    if (tcp_sk->tcb->snd_wl1 < tcp_h->sent_seq ||
+        (tcp_sk->tcb->snd_wl1 =
+             tcp_h->sent_seq && tcp_sk->tcb->snd_wl2 <= tcp_h->recv_ack)) {
+      tcp_sk->tcb->snd_wnd = rte_be_to_cpu_16(tcp_h->rx_win);  // TODO
+      tcp_sk->tcb->snd_wl1 = tcp_h->sent_seq;
+      tcp_sk->tcb->snd_wl2 = tcp_h->recv_ack;
     }
   }
   return 0;
@@ -161,11 +161,11 @@ static inline int state_tcp_handle_data(xy_tcp_socket *tcp_sk,
   recv_enqueue(tcp_sk, buf);
   // TODO window management
   // TODO retransmission
-  tcp_sk->tcb.rcv_nxt = tcp_h->sent_seq + 1;
+  tcp_sk->tcb->rcv_nxt = tcp_h->sent_seq + 1;
   // <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
   struct rte_mbuf *reply_buf = rte_pktmbuf_alloc(buf_pool);
-  tcp_send(tcp_sk, reply_buf, RTE_TCP_ACK_FLAG, tcp_sk->tcb.snd_nxt,
-           tcp_sk->tcb.rcv_nxt, 0);
+  tcp_send(tcp_sk, reply_buf, RTE_TCP_ACK_FLAG, tcp_sk->tcb->snd_nxt,
+           tcp_sk->tcb->rcv_nxt, 0);
   return 0;
 }
 
@@ -186,12 +186,12 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
   const uint8_t tcp_flags = tcp_h->tcp_flags;
   //  first check sequence number
   int acceptable;
-  if (tcp_sk->tcb.rcv_wnd == 0) {
+  if (tcp_sk->tcb->rcv_wnd == 0) {
     acceptable =
         tcp_flags & (RTE_TCP_ACK_FLAG | RTE_TCP_URG_FLAG | RTE_TCP_RST_FLAG);
   } else {
-    acceptable = tcp_h->sent_seq < tcp_sk->tcb.rcv_nxt ||
-                 tcp_h->sent_seq > tcp_sk->tcb.rcv_nxt + tcp_sk->tcb.rcv_wnd;
+    acceptable = tcp_h->sent_seq < tcp_sk->tcb->rcv_nxt ||
+                 tcp_h->sent_seq > tcp_sk->tcb->rcv_nxt + tcp_sk->tcb->rcv_wnd;
   }
 
   if xy_unlikely (!acceptable) {
@@ -200,7 +200,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       return 0;
     } else {  // send <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
       return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                         tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
+                         tcp_sk->tcb->snd_nxt, tcp_sk->tcb->rcv_nxt);
     }
   }
 
@@ -244,8 +244,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
 
   switch (tcp_sk->state) {
     case TCP_SYN_RECEIVED:
-      if xy_unlikely (tcp_sk->tcb.snd_una < tcp_h->recv_ack ||
-                      tcp_h->recv_ack > tcp_sk->tcb.snd_nxt) {
+      if xy_unlikely (tcp_sk->tcb->snd_una < tcp_h->recv_ack ||
+                      tcp_h->recv_ack > tcp_sk->tcb->snd_nxt) {
         return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
                            tcp_h->recv_ack, 0);
       } else {
@@ -262,7 +262,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     case TCP_FIN_WAIT_1:
       state_tcp_handle_ack(tcp_sk, tcp_h);
       if (tcp_h->recv_ack ==
-          tcp_sk->tcb.snd_nxt) {  // TODO Way to check whether FIN is
+          tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN is
         // acknowledged?
         tcp_sk->state = TCP_FIN_WAIT_2;
       }
@@ -273,7 +273,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     case TCP_CLOSE_WAIT:
       state_tcp_handle_ack(tcp_sk, tcp_h);
       if (tcp_h->recv_ack ==
-          tcp_sk->tcb.snd_nxt) {  // TODO Way to check whether FIN is
+          tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN is
         // acknowledged?
         tcp_sk->state = TCP_TIME_WAIT;
       }
@@ -283,7 +283,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       break;
     case TCP_LAST_ACK:
       if (tcp_h->recv_ack ==
-          tcp_sk->tcb.snd_nxt) {  // TODO Way to check whether FIN is
+          tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN is
         // acknowledged?
         tcp_sk->state = TCP_CLOSE;  // TODO clean it
       }
@@ -299,8 +299,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       case TCP_ESTABLISHED:
       case TCP_FIN_WAIT_1:
       case TCP_FIN_WAIT_2:
-        if (tcp_sk->tcb.rcv_up < tcp_h->tcp_urp)
-          tcp_sk->tcb.rcv_up = tcp_h->tcp_urp;
+        if (tcp_sk->tcb->rcv_up < tcp_h->tcp_urp)
+          tcp_sk->tcb->rcv_up = tcp_h->tcp_urp;
         break;
 
       default:
@@ -331,7 +331,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
         break;
       case TCP_FIN_WAIT_1:
         if (tcp_h->recv_ack ==
-            tcp_sk->tcb.snd_nxt) {  // TODO Way to check whether FIN
+            tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN
           // is acknowledged?
           tcp_sk->state = TCP_TIME_WAIT;
         } else {
@@ -351,9 +351,9 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       default:
         break;
     }
-    tcp_sk->tcb.rcv_nxt = tcp_h->sent_seq + 1;
+    tcp_sk->tcb->rcv_nxt = tcp_h->sent_seq + 1;
     return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                       tcp_sk->tcb.snd_nxt, tcp_sk->tcb.rcv_nxt);
+                       tcp_sk->tcb->snd_nxt, tcp_sk->tcb->rcv_nxt);
   }
 
   return 0;

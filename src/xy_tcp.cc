@@ -7,7 +7,7 @@ inline int tcp_setup(xy_tcp_socket *tcp_sk, struct rte_tcp_hdr *tcp_h,
 
   tcp_h->data_off = sizeof(struct rte_tcp_hdr) / 4;
   tcp_h->tcp_flags = tcp_flags;
-  tcp_h->rx_win = tcp_sk->tcb.rcv_wnd;
+  tcp_h->rx_win = tcp_sk->tcb->rcv_wnd;
   tcp_h->tcp_urp = 0;  // TODO
   return 0;
 }
