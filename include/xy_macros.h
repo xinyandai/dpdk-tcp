@@ -8,6 +8,8 @@
 #include <stdint.h>
 
 #define XY_MAX_TCP (1 << 16)
+#define XY_CACHE_LINE_SIZE 64
+
 
 #define XY_IP_HDR_LEN sizeof(struct rte_ipv4_hdr)
 #define XY_TCP_HDR_LEN sizeof(struct rte_tcp_hdr)

@@ -5,6 +5,7 @@
 #ifndef DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #define DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #include "xy_list.h"
+#include "xy_ring.h"
 
 struct tcb {
   /// oldest unacknowledged sequence number
@@ -22,6 +23,9 @@ struct tcb {
   uint32_t rcv_wnd;
   uint32_t rcv_up;
   uint32_t irs;
+
+  xy_ring_buffer recv_buf;
+  xy_ring_buffer send_buf;
 };
 
 enum tcp_states {
@@ -82,33 +86,22 @@ typedef struct {
   rte_be16_t port_src;
   rte_be16_t port_dst;
   xy_ip_socket ip_socket;
-
-  struct tcb tcb;
-  struct rte_ring* recv_buf;
-  struct rte_ring* send_buf;
+  struct tcb* tcb;
 } xy_tcp_socket;
 
 inline void recv_enqueue(xy_tcp_socket* tcp_sk, struct rte_mbuf* buf) {
-  rte_ring_enqueue(tcp_sk->recv_buf, buf);
+  xy_spsc_ring_add(&tcp_sk->tcb->recv_buf, (void*)buf);
 }
 
 inline void send_enqueue(xy_tcp_socket* tcp_sk, struct rte_mbuf* buf) {
-  rte_ring_enqueue(tcp_sk->send_buf, buf);
+  xy_spsc_ring_add(&tcp_sk->tcb->send_buf, buf);
 }
 
 inline struct rte_mbuf* recv_dequeue(xy_tcp_socket* tcp_sk) {
-  struct rte_mbuf* m_buf;
-  if (0 != rte_ring_dequeue(tcp_sk->recv_buf, (void**)&m_buf)) {
-    return NULL;
-  }
-  return m_buf;
+  return (struct rte_mbuf*) xy_spsc_ring_peek(&tcp_sk->tcb->recv_buf);
 }
 
 inline struct rte_mbuf* send_dequeue(xy_tcp_socket* tcp_sk) {
-  struct rte_mbuf* m_buf;
-  if (0 != rte_ring_dequeue(tcp_sk->send_buf, (void**)&m_buf)) {
-    return NULL;
-  }
-  return m_buf;
+  return (struct rte_mbuf*) xy_spsc_ring_peek(&tcp_sk->tcb->send_buf);
 }
 #endif  // DPDK_TCP_INCLUDE_XY_STRUCT_H_
