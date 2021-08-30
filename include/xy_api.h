@@ -35,7 +35,7 @@
 #include "xy_struct.h"
 #include "xy_tcp_port.h"
 
-#include "xy_ring.h"
+#include "xy_tcp_wnd_hdl.h"
 
 extern uint8_t ttl;
 extern uint32_t xy_this_ip;

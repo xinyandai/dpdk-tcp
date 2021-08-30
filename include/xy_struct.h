@@ -5,7 +5,8 @@
 #ifndef DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #define DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #include "xy_list.h"
-#include "xy_ring.h"
+#include "xy_list_mbuf.h"
+#include "xy_tcp_wnd.h"
 
 struct tcb {
   /// oldest unacknowledged sequence number
@@ -13,19 +14,30 @@ struct tcb {
   ///  next sequence number to be sent
   uint32_t snd_nxt;
   uint16_t snd_wnd;
+  /// send urgent pointer
   uint32_t snd_up;
+  /// segment sequence number used for last window update
   uint32_t snd_wl1;
+  /// segment acknowledgment number used for last window update
   uint32_t snd_wl2;
+  /// initial send sequence number
   uint32_t iss;
   /// next sequence number expected on an incoming segments, and is the left or
   /// lower edge of the receive window
   uint32_t rcv_nxt;
   uint32_t rcv_wnd;
+  /// receive urgent pointer
   uint32_t rcv_up;
+  /// initial receive sequence number
   uint32_t irs;
-
-  xy_ring_buffer recv_buf;
-  xy_ring_buffer send_buf;
+  /// the unread list of received buffer
+  xy_mbuf_list rcv_buf_list;
+  /// the unsent list of sent buffer
+  xy_mbuf_list snd_buf_list;
+  /// the size of receive window is fixed
+  xy_tcp_rcv_wnd rcv_wnd_buffer;
+  /// the size of send window is dynamic scaled
+  xy_tcp_snd_wnd snd_wnd_buffer;
 };
 
 enum tcp_states {
@@ -78,7 +90,7 @@ typedef struct {
 } xy_ip_socket;
 
 typedef struct {
-  list_head list;
+  xy_list_node list;
 
   uint32_t id;
   uint8_t passive;
@@ -89,19 +101,4 @@ typedef struct {
   struct tcb* tcb;
 } xy_tcp_socket;
 
-inline void recv_enqueue(xy_tcp_socket* tcp_sk, struct rte_mbuf* buf) {
-  xy_spsc_ring_add(&tcp_sk->tcb->recv_buf, (void*)buf);
-}
-
-inline void send_enqueue(xy_tcp_socket* tcp_sk, struct rte_mbuf* buf) {
-  xy_spsc_ring_add(&tcp_sk->tcb->send_buf, buf);
-}
-
-inline struct rte_mbuf* recv_dequeue(xy_tcp_socket* tcp_sk) {
-  return (struct rte_mbuf*) xy_spsc_ring_peek(&tcp_sk->tcb->recv_buf);
-}
-
-inline struct rte_mbuf* send_dequeue(xy_tcp_socket* tcp_sk) {
-  return (struct rte_mbuf*) xy_spsc_ring_peek(&tcp_sk->tcb->send_buf);
-}
 #endif  // DPDK_TCP_INCLUDE_XY_STRUCT_H_

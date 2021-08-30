@@ -67,7 +67,7 @@ tcp_sock_t connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port) {
             rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4));
   ip_setup(&tcp_sk->ip_socket, iph, IPPROTO_TCP, rte_cpu_to_be_16(ip_len));
   tcp_setup(tcp_sk, tcp_h, RTE_TCP_SYN_FLAG);
-  send_enqueue(tcp_sk, m_buf);
+  tcp_send_enqueue(tcp_sk, m_buf);
 
   return established_retrieve(tcp_sk);
 }
@@ -94,7 +94,7 @@ ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags) {
   size_t read = 0;
   while (true) {
     if (cur.buf == NULL || cur.left == 0) {
-      struct rte_mbuf *m_buf = recv_dequeue(tcp_sk);
+      struct rte_mbuf *m_buf = tcp_recv_dequeue(tcp_sk);
 
       if (!m_buf) {
         return read;
@@ -156,7 +156,7 @@ ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len, int flags) {
 
     len -= data_len;
     buf += data_len;
-    send_enqueue(tcp_sk, m_buf);
+    tcp_send_enqueue(tcp_sk, m_buf);
   }
   return 0;
 }
@@ -181,6 +181,6 @@ int xy_close(tcp_sock_t tcp_sk) {
   ip_setup(&tcp_sk->ip_socket, iph, IPPROTO_TCP, rte_cpu_to_be_16(ip_len));
   tcp_setup(tcp_sk, tcp_h, RTE_TCP_FIN_FLAG);
 
-  send_enqueue(tcp_sk, m_buf);
+  tcp_send_enqueue(tcp_sk, m_buf);
   return 0;
 }

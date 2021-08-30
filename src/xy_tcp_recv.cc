@@ -138,31 +138,14 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
   return 0;
 }
 
-static inline int state_tcp_handle_ack(xy_tcp_socket *tcp_sk,
-                                       struct rte_tcp_hdr *tcp_h) {
-  if xy_likely (tcp_sk->tcb->snd_una < tcp_h->recv_ack &&
-                tcp_h->recv_ack <= tcp_sk->tcb->snd_nxt) {
-    tcp_sk->tcb->snd_una = tcp_h->recv_ack;
-    // TODO Remove acknowledged segments on the retransmission queue
-    if (tcp_sk->tcb->snd_wl1 < tcp_h->sent_seq ||
-        (tcp_sk->tcb->snd_wl1 =
-             tcp_h->sent_seq && tcp_sk->tcb->snd_wl2 <= tcp_h->recv_ack)) {
-      tcp_sk->tcb->snd_wnd = rte_be_to_cpu_16(tcp_h->rx_win);  // TODO
-      tcp_sk->tcb->snd_wl1 = tcp_h->sent_seq;
-      tcp_sk->tcb->snd_wl2 = tcp_h->recv_ack;
-    }
-  }
-  return 0;
-}
 
 static inline int state_tcp_handle_data(xy_tcp_socket *tcp_sk,
                                         struct rte_mbuf *buf,
                                         struct rte_tcp_hdr *tcp_h) {
-  recv_enqueue(tcp_sk, buf);
-  // TODO window management
-  // TODO retransmission
-  tcp_sk->tcb->rcv_nxt = tcp_h->sent_seq + 1;
-  // <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+  /// enqueue and window management
+  tcp_recv_window_update(tcp_sk, buf, tcp_h);
+
+  /// <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
   struct rte_mbuf *reply_buf = rte_pktmbuf_alloc(buf_pool);
   tcp_send(tcp_sk, reply_buf, RTE_TCP_ACK_FLAG, tcp_sk->tcb->snd_nxt,
            tcp_sk->tcb->rcv_nxt, 0);
@@ -257,10 +240,10 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       rte_pktmbuf_free(m_buf);
       return 0;
     case TCP_ESTABLISHED:
-      state_tcp_handle_ack(tcp_sk, tcp_h);
+      tcp_ack_window_update(tcp_sk, tcp_h);
       break;
     case TCP_FIN_WAIT_1:
-      state_tcp_handle_ack(tcp_sk, tcp_h);
+      tcp_ack_window_update(tcp_sk, tcp_h);
       if (tcp_h->recv_ack ==
           tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN is
         // acknowledged?
@@ -268,10 +251,10 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       }
       break;
     case TCP_FIN_WAIT_2:  // TODO??
-      state_tcp_handle_ack(tcp_sk, tcp_h);
+    tcp_ack_window_update(tcp_sk, tcp_h);
       break;
     case TCP_CLOSE_WAIT:
-      state_tcp_handle_ack(tcp_sk, tcp_h);
+      tcp_ack_window_update(tcp_sk, tcp_h);
       if (tcp_h->recv_ack ==
           tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN is
         // acknowledged?
@@ -279,7 +262,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       }
       break;
     case TCP_CLOSING:
-      state_tcp_handle_ack(tcp_sk, tcp_h);
+      tcp_ack_window_update(tcp_sk, tcp_h);
       break;
     case TCP_LAST_ACK:
       if (tcp_h->recv_ack ==

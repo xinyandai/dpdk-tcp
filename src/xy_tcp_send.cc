@@ -11,11 +11,25 @@ static inline int tcp_send_one_buf(xy_tcp_socket *tcp_sk,
 }
 
 int tcp_send_buf(xy_tcp_socket *tcp_sk) {
-  struct rte_mbuf *m_buf = NULL;
+  /**
+   * TODO
+   * 1. timeout
+   * 2. batch send
+   * 3. batch add to tcb->snd_wnd_buffer
+   */
+  struct tcb *tcb = tcp_sk->tcb;
+  xy_tcp_snd_wnd *window = &tcb->snd_wnd_buffer;
+  uint16_t size = xy_tcp_snd_wnd_size(window);
 
-  while (NULL != (m_buf = send_dequeue(tcp_sk))) {
-    tcp_send_one_buf(tcp_sk, m_buf);
+  /// timeout
+  if (size > 0) {
+    tcp_send_one_buf(tcp_sk, window->buffer[window->head_]);
   }
 
+  for (; size < tcb->snd_wnd; ++size) {
+    struct rte_mbuf *mbuf = tcp_send_dequeue(tcp_sk);
+    xy_tcp_snd_wnd_add(&tcb->snd_wnd_buffer, mbuf);
+    tcp_send_one_buf(tcp_sk, mbuf);
+  }
   return 0;
 }

@@ -1,9 +1,10 @@
 //
-// Created by xydai on 2021/8/25.
+// Created by xydai on 2021/8/27.
 //
 #pragma once
 #ifndef DPDK_TCP_INCLUDE_XY_RING_H_
 #define DPDK_TCP_INCLUDE_XY_RING_H_
+
 #include <atomic>
 #include "xy_macros.h"
 
@@ -14,6 +15,7 @@ typedef struct {
   alignas(XY_CACHE_LINE_SIZE) std::atomic<size_t> tail_;
   void* buffer[XY_RING_SIZE];
 } xy_ring_buffer;
+
 
 ///
 inline int xy_ring_empty(xy_ring_buffer* ring) {
