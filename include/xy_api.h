@@ -47,7 +47,9 @@ extern struct rte_mempool *buf_pool;
 #define tcp_sock_t xy_tcp_socket *
 
 [[noreturn]] void lcore_main();
+
 struct rte_mempool *xy_setup(int argc, char *argv[]);
+
 int xy_dev_port_init(struct rte_mempool *buf_pool,
                      struct rte_ether_addr *eth_addr, uint16_t port,
                      uint16_t n_rx_q, uint16_t n_tx_q, uint16_t nb_rxd,
@@ -61,13 +63,5 @@ tcp_sock_t connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
 ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags);
 ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len);
 int xy_close(tcp_sock_t tcp_sk);
-
-int socket(int domain, int type, int protocol);
-int bind(int sock_id, const struct sockaddr *addr, socklen_t addr_len);
-int listen(int sock_id, int backlog);
-int accept(int sock_id, struct sockaddr *addr, socklen_t *addr_len);
-int connect(int sock_id, const struct sockaddr *addr, socklen_t addr_len);
-ssize_t recv(int sock_id, void *buf, size_t len, int flags);
-ssize_t send(int sock_id, const void *buf, size_t len, int flags);
 
 #endif

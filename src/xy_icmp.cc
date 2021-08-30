@@ -21,7 +21,9 @@ inline int icmp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
     icmp_hdr->icmp_cksum = 0;
     icmp_hdr->icmp_cksum =
         ~rte_raw_cksum(icmp_hdr, len - RTE_ETHER_HDR_LEN - ipv4_hdr_len);
-    return rte_eth_tx_burst(0, 0, &m_buf, 1);
+    if(0 == rte_eth_tx_burst(0, 0, &m_buf, 1)) {
+      return 1;
+    }
   }
   return 0;
 }

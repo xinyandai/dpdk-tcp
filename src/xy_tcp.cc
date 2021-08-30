@@ -46,13 +46,3 @@ int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf, uint8_t tcp_flags,
   return ip_send(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP,
                  data_len + sizeof(struct rte_tcp_hdr));
 }
-
-int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
-             struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
-             struct rte_ether_hdr *eh, uint8_t tcp_flags, rte_be32_t sent_seq,
-             rte_be32_t recv_ack, uint16_t data_len) {
-  tcp_setup(tcp_sk, tcp_h, tcp_flags);
-  tcp_ready(tcp_h, iph, sent_seq, recv_ack);
-  return ip_send(&tcp_sk->ip_socket, m_buf, iph, eh, IPPROTO_TCP,
-                 data_len + sizeof(struct rte_tcp_hdr));
-}
