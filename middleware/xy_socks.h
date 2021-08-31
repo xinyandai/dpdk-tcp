@@ -5,8 +5,6 @@
 #ifndef DPDK_TCP_INCLUDE_XY_SOCKS_H_
 #define DPDK_TCP_INCLUDE_XY_SOCKS_H_
 
-#include "xy_struct.h"
-
 #include "xy_api.h"
 
 uint32_t tcp_socket_id();

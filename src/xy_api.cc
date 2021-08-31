@@ -1,18 +1,15 @@
 #include "xy_api.h"
+#include "xy_api_asyn.h"
 
 tcp_sock_t xy_socket(int domain, int type, int protocol) {
-  xy_return_errno_if(domain != AF_INET, EAFNOSUPPORT, NULL,
-                     "domain should be AF_INET");
-  xy_return_errno_if(type != SOCK_STREAM, EINVAL, NULL,
-                     "type should be SOCK_STREAM");
-  xy_return_errno_if(protocol != IPPROTO_TCP, EINVAL, NULL,
-                     "protocol should be IPPROTO_TCP");
 
-  xy_tcp_socket *tcp_sk = allocate_tcp_socket();
-  tcp_sk->id = tcp_socket_id();
-  tcp_sk->state = TCP_CLOSE;
+  xy_tcp_socket *tcp_sk = NULL;
+  xy_socket_ops socket_ops = {
+      .type = XY_OPS_CREATE,
+      .create_ = { tcp_sk }
+  };
+  xy_asyn_event_enqueue(&socket_ops);
 
-  xy_return_errno_if(NULL == tcp_sk, ENFILE, NULL, "bad alloc");
   // init tcp_sk
   return tcp_sk;
 }
@@ -25,12 +22,11 @@ int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port) {
   xy_return_errno_if(port < 0 || port >= 65536 - 1, EINVAL, -1,
                      "invalid port number");
 
-  int register_ret = port_register(port);
-  xy_return_errno_if(register_ret != 0, EBADF, register_ret,
-                     "port is registered");
-
-  tcp_sk->ip_socket.ip_src = ip;
-  tcp_sk->port_src = port;
+  xy_socket_ops socket_ops = {
+      .type = XY_OPS_BIND,
+      .bind_ = { tcp_sk, ip, port }
+  };
+  xy_asyn_event_enqueue(&socket_ops);
 
   return 0;
 }
@@ -46,28 +42,30 @@ int xy_listen(tcp_sock_t tcp_sk, int backlog) {
   tcp_sk->state = TCP_LISTEN;
   listener_tcp_sock_enqueue(tcp_sk);
 
+  xy_socket_ops socket_ops = {
+      .type = XY_OPS_LISTEN,
+      .bind_ = { tcp_sk }
+  };
+  xy_asyn_event_enqueue(&socket_ops);
+
+
   return 0;
 }
 
-tcp_sock_t connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port) {
+tcp_sock_t xy_connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port) {
   xy_return_errno_if(tcp_sk == NULL, EBADF, NULL,
                      "the tcp_socket pointer is NULL");
   xy_return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF, NULL,
                      "the tcp socket id is invalid");
   xy_return_errno_if(tcp_sk->state != TCP_CLOSE, EINVAL, NULL,
                      "cannot connect when state is not TCP_CLOSE");
-  struct rte_mbuf *m_buf = rte_pktmbuf_alloc(buf_pool);
-  struct rte_ether_hdr *eh = rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
-  auto iph = (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
-  auto tcp_h = (struct rte_tcp_hdr *)((unsigned char *)(iph) + XY_IP_HDR_LEN);
 
-  uint16_t ip_len = XY_TCP_HDR_LEN + XY_IP_HDR_LEN;
+  xy_socket_ops socket_ops = {
+      .type = XY_OPS_CONNECT,
+      .connect_ = { tcp_sk, ip, port }
+  };
+  xy_asyn_event_enqueue(&socket_ops);
 
-  eth_setup(&tcp_sk->ip_socket.eth_socket, eh,
-            rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4));
-  ip_setup(&tcp_sk->ip_socket, iph, IPPROTO_TCP, rte_cpu_to_be_16(ip_len));
-  tcp_setup(tcp_sk, tcp_h, RTE_TCP_SYN_FLAG);
-  tcp_send_enqueue(tcp_sk, m_buf);
 
   return established_retrieve(tcp_sk);
 }
@@ -79,21 +77,28 @@ tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port) {
                      "the tcp socket id is invalid");
   xy_return_errno_if(tcp_sk->state != TCP_LISTEN, EINVAL, NULL,
                      "cannot accept when state is not TCP_LISTEN");
-
+  xy_socket_ops socket_ops = {
+      .type = XY_OPS_ACCEPT,
+      .connect_ = { tcp_sk, ip, port }
+  };
+  xy_asyn_event_enqueue(&socket_ops);
   return established_take_next();
 }
 
-typedef struct {
-  const char *buf;
-  uint16_t left;
-} xy_buf_cursor;
-
 ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags) {
-  static xy_buf_cursor cur = {.buf = NULL, .left = 0};
+  xy_return_errno_if(tcp_sk == NULL, EBADF, NULL,
+                     "the tcp_socket pointer is NULL");
+  xy_return_errno_if(tcp_sk->id < 0 || tcp_sk->id > XY_MAX_TCP, EBADF, NULL,
+                     "the tcp socket id is invalid");
+  xy_return_errno_if(tcp_sk->state != TCP_ESTABLISHED, EINVAL, NULL,
+                     "cannot receive when state is not TCP_ESTABLISHED");
+  xy_return_errno_if(tcp_sk->tcb == NULL, EINVAL, NULL,
+                     "cannot receive when tcb is NULL");
+  xy_buf_cursor *cur = &tcp_sk->tcb->read_cursor;
 
-  size_t read = 0;
+  ssize_t read = 0;
   while (true) {
-    if (cur.buf == NULL || cur.left == 0) {
+    if (cur->buf == NULL || cur->left == 0) {
       struct rte_mbuf *m_buf = tcp_recv_dequeue(tcp_sk);
 
       if (!m_buf) {
@@ -101,31 +106,30 @@ ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags) {
       }
 
       /// reset cursor
-      struct rte_ether_hdr *eh =
-          rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
+      auto eh = rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
       auto iph =
           (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
       uint8_t iph_len = rte_ipv4_hdr_len(iph);
-      auto tcp_hdr_len = sizeof(struct rte_tcp_hdr);
       auto tcp_h = (struct rte_tcp_hdr *)((unsigned char *)(iph) + iph_len);
 
-      cur.buf = (char *)tcp_h + tcp_hdr_len;
-      cur.left = iph->total_length - iph_len - tcp_hdr_len;
+      cur->buf = (char *)tcp_h + XY_TCP_HDR_LEN;
+      cur->left = iph->total_length - iph_len - XY_TCP_HDR_LEN;
     }
 
-    if (cur.left >= len) {
-      rte_memcpy(buf, cur.buf, len);
+    if (cur->left >= len) {
+      rte_memcpy(buf, cur->buf, len);
       read += len;
-      buf += len;
-      cur.buf += len;
-      cur.left -= len;
+      // buf += len;
+      cur->buf += len;
+      cur->left -= len;
       return read;
     } else {
-      rte_memcpy(buf, cur.buf, cur.left);
-      read += cur.left;
-      buf += cur.left;
-      cur.buf = NULL;
-      cur.left = 0;
+      rte_memcpy(buf, cur->buf, cur->left);
+      read += cur->left;
+      buf += cur->left;
+      cur->buf = NULL;
+      cur->left = 0;
+      rte_pktmbuf_free(cur->mbuf);
     }
   }
 }
@@ -169,18 +173,10 @@ int xy_close(tcp_sock_t tcp_sk) {
   xy_return_errno_if(tcp_sk->state != TCP_ESTABLISHED, EINVAL, NULL,
                      "cannot connect when state is not TCP_ESTABLISHED");
 
-  struct rte_mbuf *m_buf = rte_pktmbuf_alloc(buf_pool);
-  struct rte_ether_hdr *eh = rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
-  auto iph = (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
-  auto tcp_h = (struct rte_tcp_hdr *)((unsigned char *)(iph) + XY_IP_HDR_LEN);
-
-  uint16_t ip_len = XY_TCP_HDR_LEN + XY_IP_HDR_LEN;
-
-  eth_setup(&tcp_sk->ip_socket.eth_socket, eh,
-            rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4));
-  ip_setup(&tcp_sk->ip_socket, iph, IPPROTO_TCP, rte_cpu_to_be_16(ip_len));
-  tcp_setup(tcp_sk, tcp_h, RTE_TCP_FIN_FLAG);
-
-  tcp_send_enqueue(tcp_sk, m_buf);
+  xy_socket_ops socket_ops = {
+      .type = XY_OPS_CLOSE,
+      .connect_ = { tcp_sk }
+  };
+  xy_asyn_event_enqueue(&socket_ops);
   return 0;
 }

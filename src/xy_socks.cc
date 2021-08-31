@@ -121,13 +121,3 @@ xy_tcp_socket *tcp_sock_lookup(rte_be32_t dst_ip_be, rte_be16_t dst_port,
                                         src_ip, src_port);
   return find;
 }
-
-void m_buf_enqueue(xy_tcp_socket *tcp_sock) {
-  std::lock_guard<std::mutex> lock(mutex_listener);
-  xy_list_add_head(&list_listeners, (xy_list_node *)tcp_sock);
-}
-
-void m_buf_dequeue(xy_tcp_socket *tcp_sock) {
-  std::lock_guard<std::mutex> lock(mutex_listener);
-  xy_list_del((xy_list_node *)tcp_sock);
-}

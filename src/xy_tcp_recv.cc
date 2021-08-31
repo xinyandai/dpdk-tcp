@@ -138,7 +138,6 @@ static inline int state_tcp_syn_sent(xy_tcp_socket *tcp_sk,
   return 0;
 }
 
-
 static inline int state_tcp_handle_data(xy_tcp_socket *tcp_sk,
                                         struct rte_mbuf *buf,
                                         struct rte_tcp_hdr *tcp_h) {
@@ -244,20 +243,18 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       break;
     case TCP_FIN_WAIT_1:
       tcp_ack_window_update(tcp_sk, tcp_h);
-      if (tcp_h->recv_ack ==
-          tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN is
-        // acknowledged?
+      // TODO Way to check whether FIN is acknowledged?
+      if (tcp_h->recv_ack == tcp_sk->tcb->snd_nxt) {
         tcp_sk->state = TCP_FIN_WAIT_2;
       }
       break;
     case TCP_FIN_WAIT_2:  // TODO??
-    tcp_ack_window_update(tcp_sk, tcp_h);
+      tcp_ack_window_update(tcp_sk, tcp_h);
       break;
     case TCP_CLOSE_WAIT:
       tcp_ack_window_update(tcp_sk, tcp_h);
-      if (tcp_h->recv_ack ==
-          tcp_sk->tcb->snd_nxt) {  // TODO Way to check whether FIN is
-        // acknowledged?
+      // TODO Way to check whether FIN is acknowledged?
+      if (tcp_h->recv_ack == tcp_sk->tcb->snd_nxt) {
         tcp_sk->state = TCP_TIME_WAIT;
       }
       break;

@@ -22,7 +22,7 @@ typedef struct xy_mbuf_list_t {
   std::atomic_flag flag; // TODO
 } xy_mbuf_list;
 
-static_assert(sizeof(xy_mbuf_list) < XY_ETH_HDR_LEN + XY_IP_HDR_LEN);
+static_assert(sizeof(xy_mbuf_list) <= XY_ETH_HDR_LEN + XY_IP_HDR_LEN);
 
 static inline void xy_mbuf_list_init(xy_mbuf_list *head) {
   xy_list_init((xy_list_node *)head);

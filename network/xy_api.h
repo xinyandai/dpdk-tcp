@@ -22,15 +22,15 @@
 #include <signal.h>
 #include <stdint.h>
 
-#include "xy_ip.h"
 #include "xy_arp.h"
 #include "xy_eth.h"
-#include "xy_tcp.h"
 #include "xy_icmp.h"
+#include "xy_ip.h"
+#include "xy_tcp.h"
 
-#include "xy_list.h"
+#include "../middleware/xy_list.h"
 
-#include "xy_socks.h"
+#include "../middleware/xy_socks.h"
 #include "xy_macros.h"
 #include "xy_struct.h"
 #include "xy_tcp_port.h"
@@ -59,7 +59,7 @@ tcp_sock_t xy_socket(int domain, int type, int protocol);
 int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port);
 int xy_listen(tcp_sock_t tcp_sk, int backlog);
 tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
-tcp_sock_t connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
+tcp_sock_t xy_connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
 ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags);
 ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len);
 int xy_close(tcp_sock_t tcp_sk);

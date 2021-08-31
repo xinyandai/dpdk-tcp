@@ -4,9 +4,15 @@
 #pragma once
 #ifndef DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #define DPDK_TCP_INCLUDE_XY_STRUCT_H_
-#include "xy_list.h"
-#include "xy_list_mbuf.h"
+#include "../middleware/xy_list.h"
+#include "../middleware/xy_list_mbuf.h"
 #include "xy_tcp_wnd.h"
+
+typedef struct {
+  uint16_t left;
+  const char *buf;
+  struct rte_mbuf* mbuf;
+} xy_buf_cursor;
 
 struct tcb {
   /// oldest unacknowledged sequence number
@@ -30,6 +36,8 @@ struct tcb {
   uint32_t rcv_up;
   /// initial receive sequence number
   uint32_t irs;
+  /// cursor to track rcv_buf_list
+  xy_buf_cursor read_cursor;
   /// the unread list of received buffer
   xy_mbuf_list rcv_buf_list;
   /// the unsent list of sent buffer
