@@ -3,7 +3,7 @@
 
 static mpmc_list event_queue;
 
-void xy_asyn_socket(xy_ops_create *create) {
+static inline void xy_asyn_socket(xy_ops_create *create) {
   xy_tcp_socket *tcp_sk = allocate_tcp_socket();
   tcp_sk->id = tcp_socket_id();
   tcp_sk->state = TCP_CLOSE;
@@ -11,7 +11,7 @@ void xy_asyn_socket(xy_ops_create *create) {
   create->tcp_sk = tcp_sk;
 }
 
-void xy_asyn_bind(xy_ops_bind *bind) {
+static inline void xy_asyn_bind(xy_ops_bind *bind) {
   xy_tcp_socket *tcp_sk = bind->tcp_sk;
 
   int register_ret = port_register(bind->port);
@@ -24,12 +24,12 @@ void xy_asyn_bind(xy_ops_bind *bind) {
   }
 }
 
-void xy_asyn_listen(xy_ops_listen *listen) {
+static inline void xy_asyn_listen(xy_ops_listen *listen) {
   listen->tcp_sk->state = TCP_LISTEN;
   listener_tcp_sock_enqueue(listen->tcp_sk);
 }
 
-void xy_asyn_connect(xy_ops_connect *connect) {
+static inline void xy_asyn_connect(xy_ops_connect *connect) {
   struct rte_mbuf *m_buf = rte_pktmbuf_alloc(buf_pool);
   struct rte_ether_hdr *eh = rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
   auto iph = (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
@@ -46,9 +46,9 @@ void xy_asyn_connect(xy_ops_connect *connect) {
   tcp_send_enqueue(tcp_sk, m_buf);
 }
 
-void xy_asyn_accept(xy_ops_accept *accept) {}
+static inline void xy_asyn_accept(xy_ops_accept *accept) {}
 
-int xy_asyn_close(xy_ops_close *close) {
+static inline int xy_asyn_close(xy_ops_close *close) {
   struct rte_mbuf *m_buf = rte_pktmbuf_alloc(buf_pool);
   struct rte_ether_hdr *eh = rte_pktmbuf_mtod(m_buf, struct rte_ether_hdr *);
   auto iph = (struct rte_ipv4_hdr *)((unsigned char *)(eh) + RTE_ETHER_HDR_LEN);
@@ -68,11 +68,8 @@ int xy_asyn_close(xy_ops_close *close) {
   return 0;
 }
 
-void xy_asyn_event_handle() {
-  mpmc_list_node *node;
-  while ((node = mpmc_list_del_head(&event_queue.head, &event_queue.tail))) {
-    auto ops = (xy_socket_ops *)node;
-    switch (ops->type) {
+static inline xy_asyn_event_handle_ops(xy_socket_ops* ops) {
+  switch (ops->type) {
       case XY_OPS_CREATE:
         xy_asyn_socket(&ops->create_);
         break;
@@ -92,7 +89,15 @@ void xy_asyn_event_handle() {
         xy_asyn_accept(&ops->accept_);
         break;
     }
+}
+
+void xy_asyn_event_handle() {
+  mpmc_list_node *node;
+  while ((node = mpmc_list_del_head(&event_queue.head, &event_queue.tail))) {
+    xy_asyn_event_handle_ops((xy_socket_ops *)node);
   }
 }
 
-void xy_asyn_event_enqueue(xy_socket_ops *ops) {}
+void xy_asyn_event_enqueue(xy_socket_ops *ops) {
+  mpmc_list_add_tail(&event_queue.tail, (mpmc_list_node*) ops);
+}

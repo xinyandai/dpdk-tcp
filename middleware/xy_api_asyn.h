@@ -47,6 +47,8 @@ typedef struct {
 
 typedef struct {
   xy_ops_type type;
+  std::mutex mutex;
+  std::condition_variable cv;
   union {
     xy_ops_create create_;
     xy_ops_bind bind_;
