@@ -69,6 +69,7 @@ static inline int xy_asyn_close(xy_ops_close *close) {
 }
 
 static inline xy_asyn_event_handle_ops(xy_socket_ops* ops) {
+
   switch (ops->type) {
       case XY_OPS_CREATE:
         xy_asyn_socket(&ops->create_);
@@ -89,6 +90,11 @@ static inline xy_asyn_event_handle_ops(xy_socket_ops* ops) {
         xy_asyn_accept(&ops->accept_);
         break;
     }
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    ops->done = 1;
+  }
+  ops->cv.notify_one();
 }
 
 void xy_asyn_event_handle() {
@@ -100,4 +106,7 @@ void xy_asyn_event_handle() {
 
 void xy_asyn_event_enqueue(xy_socket_ops *ops) {
   mpmc_list_add_tail(&event_queue.tail, (mpmc_list_node*) ops);
+  
+  std::unique_lock<std::mutex> lock(ops->mutex));
+  ops->cv.wait(lock, [] { return ops->done; });
 }

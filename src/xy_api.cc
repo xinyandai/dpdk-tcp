@@ -3,7 +3,6 @@
 
 tcp_sock_t xy_socket(int domain, int type, int protocol) {
 
-  xy_tcp_socket *tcp_sk = NULL;
   xy_socket_ops socket_ops = {
       .type = XY_OPS_CREATE,
       .create_ = { tcp_sk }
@@ -11,7 +10,7 @@ tcp_sock_t xy_socket(int domain, int type, int protocol) {
   xy_asyn_event_enqueue(&socket_ops);
 
   // init tcp_sk
-  return tcp_sk;
+  return socket_ops -> tcp_sk;
 }
 
 int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port) {
@@ -47,7 +46,6 @@ int xy_listen(tcp_sock_t tcp_sk, int backlog) {
       .bind_ = { tcp_sk }
   };
   xy_asyn_event_enqueue(&socket_ops);
-
 
   return 0;
 }

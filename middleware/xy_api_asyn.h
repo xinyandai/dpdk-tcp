@@ -47,6 +47,7 @@ typedef struct {
 
 typedef struct {
   xy_ops_type type;
+  uint8_t done;
   std::mutex mutex;
   std::condition_variable cv;
   union {
