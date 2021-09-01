@@ -18,7 +18,7 @@
 #include <stdint.h>
 
 #include "xy_api.h"
-#include "xy_api_asyn.h"
+#include "xy_syn_api.h"
 
 ///  time to live
 uint8_t ttl;
@@ -166,7 +166,7 @@ struct rte_mempool *xy_setup(int argc, char *argv[]) {
       eth_recv(buffers[i]);
     }
 
-    xy_asyn_event_handle();
+    xy_syn_event_handle();
     established_send_buffers();
   }
 }

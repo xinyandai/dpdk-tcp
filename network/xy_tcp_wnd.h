@@ -4,6 +4,8 @@
 #pragma once
 #ifndef DPDK_TCP_INCLUDE_XY_TCP_WND_H_
 #define DPDK_TCP_INCLUDE_XY_TCP_WND_H_
+#include "xy_macros.h"
+#include "xy_list_mbuf.h"
 
 #define XY_RCV_WND_SIZE (1 << 12)
 typedef struct {

@@ -30,8 +30,8 @@
 
 #include "../middleware/xy_list.h"
 
-#include "../middleware/xy_socks.h"
 #include "xy_macros.h"
+#include "xy_socks.h"
 #include "xy_struct.h"
 #include "xy_tcp_port.h"
 

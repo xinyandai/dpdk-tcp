@@ -1,4 +1,5 @@
 #include "xy_api.h"
+#include "xy_syn_api.h"
 
 /** check ip address and port
  * \param tcp_h
@@ -351,19 +352,27 @@ int tcp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
 
   if (check_tcp_hdr(tcp_h, iph) != 0) return 0;
 
-  xy_tcp_socket *tcp_sk = tcp_sock_lookup(iph->dst_addr, tcp_h->dst_port,
-                                          iph->src_addr, tcp_h->src_port);
+  xy_tcp_socket *tcp_sk = NULL;
+  {  /// socket lookup
+    tcp_sk = syn_rcvd_tcp_sock_lookup(iph->dst_addr, tcp_h->dst_port,
+                                      iph->src_addr, tcp_h->src_port);
 
-  if (tcp_sk == NULL) {
-    xy_tcp_socket *tcp_listener =
-        tcp_listener_lookup(iph->dst_addr, tcp_h->dst_port);
-
-    if (tcp_listener == NULL) {
-      return 0;
+    if (tcp_sk == NULL) {
+      tcp_sk = established_tcp_sock_look_up(iph->dst_addr, tcp_h->dst_port,
+                                            iph->src_addr, tcp_h->src_port);
     }
 
-    tcp_sk = allocate_tcp_socket();
-    memcpy(tcp_sk, tcp_listener, sizeof(xy_tcp_socket));
+    if (tcp_sk == NULL) {
+      xy_tcp_socket *tcp_listener =
+          listener_tcp_sock_lookup(iph->dst_addr, tcp_h->dst_port);
+
+      if (tcp_listener == NULL) {
+        return 0;
+      }
+
+      tcp_sk = allocate_tcp_socket();
+      rte_memcpy(tcp_sk, tcp_listener, sizeof(xy_tcp_socket));
+    }
   }
 
   switch (tcp_sk->state) {

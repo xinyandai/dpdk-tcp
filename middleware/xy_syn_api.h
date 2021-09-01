@@ -2,10 +2,15 @@
 // Created by xydai on 2021/8/31.
 //
 #pragma once
-#ifndef DPDK_TCP_MIDDLEWARE_XY_API_ASYN_H_
-#define DPDK_TCP_MIDDLEWARE_XY_API_ASYN_H_
+#ifndef DPDK_TCP_MIDDLEWARE_XY_SYN_API_H_
+#define DPDK_TCP_MIDDLEWARE_XY_SYN_API_H_
+#include <condition_variable>
+
 #include "xy_mpmc.h"
 #include "xy_struct.h"
+#include "xy_syn_socks.h"
+
+
 enum xy_ops_type {
   XY_OPS_CREATE,
   XY_OPS_BIND,
@@ -13,6 +18,8 @@ enum xy_ops_type {
   XY_OPS_ACCEPT,
   XY_OPS_CONNECT,
   XY_OPS_CLOSE,
+  XY_OPS_SEND,
+  XY_OPS_RECV
 };
 
 typedef struct {
@@ -46,6 +53,20 @@ typedef struct {
 } xy_ops_close;
 
 typedef struct {
+  xy_tcp_socket* tcp_sk;
+  const char *buf;
+  size_t len;
+  ssize_t ret;
+} xy_ops_send;
+
+typedef struct {
+  xy_tcp_socket* tcp_sk;
+  char *buf;
+  size_t len;
+  ssize_t ret;
+} xy_ops_recv;
+
+typedef struct {
   xy_ops_type type;
   uint8_t done;
   std::mutex mutex;
@@ -57,11 +78,21 @@ typedef struct {
     xy_ops_accept accept_;
     xy_ops_connect connect_;
     xy_ops_close close_;
+    xy_ops_send send_;
+    xy_ops_recv recv_;
   };
 } xy_socket_ops;
 
 
-void xy_asyn_event_handle();
-void xy_asyn_event_enqueue(xy_socket_ops* ops);
+/**
+ * \brief Called by dpdk thread to handle ops passed from other thread.
+ */
+void xy_syn_event_handle();
 
-#endif  // DPDK_TCP_MIDDLEWARE_XY_API_ASYN_H_
+/**
+ * \brief Called by user thread to pass ops to dpdk thread.
+ * \param ops
+ */
+void xy_syn_event_enqueue(xy_socket_ops* ops);
+
+#endif  // DPDK_TCP_MIDDLEWARE_XY_SYN_API_H_

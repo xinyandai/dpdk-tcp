@@ -1,4 +1,5 @@
 #include "xy_api.h"
+#include "xy_syn_api.h"
 
 static inline int tcp_send_one_buf(xy_tcp_socket *tcp_sk,
                                    struct rte_mbuf *m_buf) {
@@ -27,7 +28,7 @@ int tcp_send_buf(xy_tcp_socket *tcp_sk) {
   }
 
   for (; size < tcb->snd_wnd; ++size) {
-    struct rte_mbuf *m_buf = tcp_send_dequeue(tcp_sk);
+    struct rte_mbuf *m_buf = xy_mbuf_list_take_head(&tcp_sk->tcb->snd_buf_list);
     xy_tcp_snd_wnd_add(&tcb->snd_wnd_buffer, m_buf);
     tcp_send_one_buf(tcp_sk, m_buf);
   }

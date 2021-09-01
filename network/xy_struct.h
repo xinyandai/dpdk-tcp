@@ -4,9 +4,8 @@
 #pragma once
 #ifndef DPDK_TCP_INCLUDE_XY_STRUCT_H_
 #define DPDK_TCP_INCLUDE_XY_STRUCT_H_
-#include "../middleware/xy_list.h"
-#include "../middleware/xy_list_mbuf.h"
 #include "xy_tcp_wnd.h"
+#include "xy_list_mbuf.h"
 
 typedef struct {
   uint16_t left;
@@ -101,6 +100,7 @@ typedef struct {
   xy_list_node list;
 
   uint32_t id;
+  uint8_t ref_cnt;
   uint8_t passive;
   tcp_states state;
   rte_be16_t port_src;

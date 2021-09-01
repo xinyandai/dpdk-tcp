@@ -11,7 +11,7 @@ typedef struct xy_list_head_t {
   struct xy_list_head_t *prev;
 } xy_list_node;
 
-#define LIST_HEAD(name) xy_list_node name = {&(name), &(name)}
+#define XY_LIST_HEAD(name) xy_list_node name = {&(name), &(name)}
 
 static inline void xy_list_init(xy_list_node *head) {
   head->prev = head->next = head;
