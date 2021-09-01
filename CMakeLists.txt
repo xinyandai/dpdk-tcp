@@ -4,9 +4,10 @@ project(dpdk_tcp)
 set(CMAKE_CXX_STANDARD 20)
 
 find_package(Threads REQUIRED)
-include_directories(include)
+include_directories(network)
+include_directories(queue)
 
-#INCLUDE_DIRECTORIES($ENV{RTE_SDK}/build/include)
+#INCLUDE_DIRECTORIES($ENV{RTE_SDK}/build/network)
 #LINK_DIRECTORIES($ENV{RTE_SDK}/build/lib)
 
 set(link_libs ${LINK_LIBS} Threads::Threads dl rt m numa )

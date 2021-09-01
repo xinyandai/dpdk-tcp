@@ -1,5 +1,6 @@
-#ifndef __XY_API_H__
-#define __XY_API_H__
+#pragma once
+#ifndef __DPDK_TCP_INCLUDE_XY_API_H__
+#define __DPDK_TCP_INCLUDE_XY_API_H__
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -21,41 +22,46 @@
 #include <signal.h>
 #include <stdint.h>
 
-#include "xy_ip.h"
 #include "xy_arp.h"
 #include "xy_eth.h"
-#include "xy_tcp.h"
 #include "xy_icmp.h"
+#include "xy_ip.h"
+#include "xy_tcp.h"
+
+#include "xy_list.h"
+
+#include "xy_macros.h"
 #include "xy_socks.h"
 #include "xy_struct.h"
-#include "xy_macros.h"
+#include "xy_tcp_port.h"
+
+#include "xy_tcp_wnd_hdl.h"
 
 extern uint8_t ttl;
 extern uint32_t xy_this_ip;
 extern struct rte_ether_addr xy_this_mac;
 
+extern struct rte_mempool *buf_pool;
+
 #define BURST_SIZE 1024
 #define tcp_sock_t xy_tcp_socket *
+
+[[noreturn]] void lcore_main();
+
+struct rte_mempool *xy_setup(int argc, char *argv[]);
+
+int xy_dev_port_init(struct rte_mempool *buf_pool,
+                     struct rte_ether_addr *eth_addr, uint16_t port,
+                     uint16_t n_rx_q, uint16_t n_tx_q, uint16_t nb_rxd,
+                     uint16_t nb_txd);
 
 tcp_sock_t xy_socket(int domain, int type, int protocol);
 int xy_bind(tcp_sock_t tcp_sk, uint32_t ip, uint16_t port);
 int xy_listen(tcp_sock_t tcp_sk, int backlog);
 tcp_sock_t xy_accept(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
+tcp_sock_t xy_connect(tcp_sock_t tcp_sk, uint32_t *ip, uint16_t *port);
 ssize_t xy_recv(tcp_sock_t tcp_sk, char *buf, size_t len, int flags);
 ssize_t xy_send(tcp_sock_t tcp_sk, const char *buf, size_t len);
 int xy_close(tcp_sock_t tcp_sk);
-
-struct rte_mempool *xy_setup(int argc, char *argv[]);
-int xy_dev_port_init(struct rte_mempool *buf_pool,
-                     struct rte_ether_addr *eth_addr, uint16_t port,
-                     uint16_t rx_rings, uint16_t tx_rings,
-                     uint16_t nb_rxd, uint16_t nb_txd);
-
-int socket(int domain, int type, int protocol);
-int bind(int sock_id, const struct sockaddr *addr, socklen_t addr_len);
-int listen(int sock_id, int backlog);
-int accept(int sock_id, struct sockaddr *addr, socklen_t *addr_len);
-ssize_t recv(int sock_id, void *buf, size_t len, int flags);
-ssize_t send(int sock_id, const void *buf, size_t len, int flags);
 
 #endif

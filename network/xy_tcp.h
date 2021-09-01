@@ -1,17 +1,14 @@
 #pragma once
-#ifndef __XY_TCP_H__
-#define __XY_TCP_H__
+#ifndef ____DPDK_TCP_INCLUDE_XY_TCP_H__
+#define ____DPDK_TCP_INCLUDE_XY_TCP_H__
 
 #include <rte_mbuf.h>
 
+#include <rte_ether.h>
 #include <rte_ip.h>
 #include <rte_tcp.h>
-#include <rte_ether.h>
 
-#include "xy_ip.h"
-#include "xy_eth.h"
 #include "xy_struct.h"
-
 
 //                                            Transmission Control Protocol
 //                                                 Functional Specification
@@ -63,50 +60,89 @@
 //     \ snd ACK                 +---------+delete TCB         +---------+
 //      ------------------------>|TIME WAIT|------------------>| CLOSED  |
 //                               +---------+                   +---------+
-
+//
 //                       TCP Connection State Diagram
 
-int port_register(uint16_t port);
-xy_tcp_socket *allocate_tcp_socket();
-
-
+/**
+ * \brief process the received TCP package.
+ * \param m_buf the received rte_mbuf package.
+ * \param eh  eth header lies in m_buf.
+ * \param iph ip header lies in m_buf.
+ * \param ipv4_hdr_len the length of ipv4 header.
+ * \param len the length of the segment (including ether header).
+ * \return 0 if success, 1 on error
+ */
 int tcp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
              struct rte_ipv4_hdr *iph, int ipv4_hdr_len, int len);
 
-int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
-             struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
-             struct rte_ether_hdr *eh, uint8_t tcp_flags,
-             rte_be32_t sent_seq, rte_be32_t recv_ack);
 /**
-struct deleted_tcp_sock {
-  struct sock sk;
-  int fd;
-  uint16_t tcp_header_len;
-  struct tcb tcb;
-  uint8_t flags;
-  uint8_t backoff;
-  int32_t srtt;
-  int32_t rttvar;
-  uint32_t rto;
-  struct timer *retransmit;
-  struct timer *delack;
-  struct timer *keepalive;
-  struct timer *linger;
-  uint8_t delacks;
-  uint16_t rmss;
-  uint16_t smss;  // SENDER MAXIMUM SEGMENT SIZE (SMSS): The size does not
-                  // include the TCP/IP headers and options.
-  uint16_t cwnd;  // RECEIVER MAXIMUM SEGMENT SIZE (RMSS)
-  uint32_t inflight;
+ * \brief setup the fields (except sent_seq, recv_ack and cksum, which would be
+ * filled in tcp_ready) of rte_tcp_hdr with tcp_flags, and other information in
+ * tcp_sk.
+ * \param tcp_sk
+ * \param tcp_h
+ * \param tcp_flags
+ * \return 0 if success, 1 on error
+ */
+int tcp_setup(xy_tcp_socket *tcp_sk, struct rte_tcp_hdr *tcp_h,
+              uint8_t tcp_flags);
 
-  uint8_t sackok;
-  uint8_t sacks_allowed;
-  uint8_t sacklen;
-  struct tcp_sack_block sacks[4];
+/**
+ * filled sent_seq and recv_ack in {iph}, then calculate the check sum.
+ * \param tcp_h
+ * \param iph
+ * \param sent_seq
+ * \param recv_ack
+ * \return 0
+ */
+int tcp_ready(struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
+              uint32_t sent_seq, uint32_t recv_ack);
 
-  uint8_t tsopt;
+/**
+ * \brief first call tcp_setup() and tcp_ready() to filled up the fields and
+ * calculate the checksum, then call ip_send() and eth_send() to send the
+ * package. {data_len} field is required here to calculate IP total length.
+ *
+ * \param tcp_sk
+ * \param m_buf
+ * \param tcp_flags
+ * \param sent_seq seq
+ * \param recv_ack ack
+ * \param data_len the length of tcp data
+ * \return
+ */
+int tcp_send(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf, uint8_t tcp_flags,
+             rte_be32_t sent_seq, rte_be32_t recv_ack, uint16_t data_len);
 
-  struct sk_buff_head ofo_queue; // Out-of-order queue
-}
-*/
+/**
+ * \brief first call tcp_setup() and tcp_ready() to filled up the fields and
+ * calculate the checksum, then call ip_forward() and eth_send() to send the
+ * package. {data_len} field is not needed here since the package length does
+ * not change.
+ *
+ * \param tcp_sk
+ * \param m_buf
+ * \param tcp_h
+ * \param iph
+ * \param eh
+ * \param tcp_flags
+ * \param sent_seq
+ * \param recv_ack
+ * \return
+ */
+int tcp_forward(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
+                struct rte_tcp_hdr *tcp_h, struct rte_ipv4_hdr *iph,
+                struct rte_ether_hdr *eh, uint8_t tcp_flags,
+                rte_be32_t sent_seq, rte_be32_t recv_ack);
+
+/**
+ * \brief Fetch packages from tcp_sk->tcb->snd_buf_list to send according the
+ * snd_wnd. Retransmit packages in tcp_sk->tcb->snd_wnd_buffer by timeout policy
+ * or acknowledgement policy.
+ *
+ * \param tcp_sk
+ * \return 0
+ */
+int tcp_send_buf(xy_tcp_socket *tcp_sk);
+
 #endif
