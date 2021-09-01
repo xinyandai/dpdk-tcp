@@ -28,7 +28,7 @@
 #include "xy_ip.h"
 #include "xy_tcp.h"
 
-#include "../middleware/xy_list.h"
+#include "xy_list.h"
 
 #include "xy_macros.h"
 #include "xy_socks.h"
