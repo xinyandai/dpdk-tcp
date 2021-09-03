@@ -33,6 +33,8 @@ int tcp_ack_window_update(xy_tcp_socket *tcp_sk, struct rte_tcp_hdr *tcp_h) {
       tcb->snd_wl1 = tcp_h->sent_seq;
       tcb->snd_wl2 = tcp_h->recv_ack;
     }
+  } else if (tcp_h->recv_ack > tcb->snd_nxt) {
+
   }
   return 0;
 }
