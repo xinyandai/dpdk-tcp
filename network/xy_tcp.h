@@ -2,8 +2,8 @@
 #ifndef ____DPDK_TCP_INCLUDE_XY_TCP_H__
 #define ____DPDK_TCP_INCLUDE_XY_TCP_H__
 
+#include <cstdlib>
 #include <rte_mbuf.h>
-
 #include <rte_ether.h>
 #include <rte_ip.h>
 #include <rte_tcp.h>
@@ -145,4 +145,8 @@ int tcp_forward(xy_tcp_socket *tcp_sk, struct rte_mbuf *m_buf,
  */
 int tcp_send_buf(xy_tcp_socket *tcp_sk);
 
+
+static inline uint32_t random_generate_iss() {
+  return rand();
+}
 #endif

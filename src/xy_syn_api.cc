@@ -1,12 +1,17 @@
-#include "xy_api.h"
 #include "xy_syn_api.h"
+#include <cstring>
+#include "xy_api.h"
 
 static mpmc_list event_queue;
 
 static inline void xy_syn_socket(xy_ops_create *create) {
   xy_tcp_socket *tcp_sk = allocate_tcp_socket();
+  std::memset(tcp_sk, 0, sizeof(xy_tcp_socket));
+
   tcp_sk->id = tcp_socket_id();
+  tcp_sk->ref_cnt = 1;
   tcp_sk->state = TCP_CLOSE;
+  tcp_sk->tcb = allocate_tcb();
 
   create->tcp_sk = tcp_sk;
 }
@@ -62,6 +67,15 @@ static inline int xy_syn_close(xy_ops_close *close) {
             rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4));
   ip_setup(&tcp_sk->ip_socket, iph, IPPROTO_TCP, rte_cpu_to_be_16(ip_len));
   tcp_setup(tcp_sk, tcp_h, RTE_TCP_FIN_FLAG);
+
+  switch (tcp_sk->state) {
+    case TCP_ESTABLISHED:
+      established_tcp_sock_dequeue(tcp_sk);
+      break;
+    case TCP_SYN_RECEIVED:
+      syn_recv_tcp_sock_dequeue(tcp_sk);
+      break;
+  }
 
   tcp_sk->state = TCP_FIN_WAIT_1;
 
