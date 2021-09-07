@@ -1,6 +1,6 @@
 #include "xy_api.h"
 
-inline int icmp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
+int icmp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh,
                      struct rte_ipv4_hdr *iph, int ipv4_hdr_len, int len) {
   struct rte_icmp_hdr *icmp_hdr =
       (struct rte_icmp_hdr *)((unsigned char *)(iph) + ipv4_hdr_len);

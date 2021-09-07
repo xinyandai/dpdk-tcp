@@ -75,6 +75,8 @@ static inline int xy_syn_close(xy_ops_close *close) {
     case TCP_SYN_RECEIVED:
       syn_recv_tcp_sock_dequeue(tcp_sk);
       break;
+    default:
+      break;
   }
 
   tcp_sk->state = TCP_FIN_WAIT_1;

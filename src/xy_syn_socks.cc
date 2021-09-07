@@ -8,7 +8,7 @@ static std::shared_mutex shared_mtx;
 #define read_lock() std::shared_lock<std::shared_mutex> lock(shared_mtx)
 #define write_lock() std::unique_lock<std::shared_mutex> lock(shared_mtx)
 
-inline void established_send_buffers() {
+void established_send_buffers() {
   read_lock();
   xy_list_node *head = &list_established;
   for (xy_list_node *pos = (head)->next; pos != (head); pos = pos->next) {
@@ -16,7 +16,7 @@ inline void established_send_buffers() {
   }
 }
 
-inline xy_tcp_socket *established_take_next() {
+xy_tcp_socket *established_take_next() {
   static xy_list_node *cur = &list_established;
   static std::mutex cur_mtx;
   std::lock_guard<std::mutex> lk(cur_mtx);
@@ -32,7 +32,7 @@ inline xy_tcp_socket *established_take_next() {
   }
 }
 
-inline xy_tcp_socket *established_retrieve(xy_tcp_socket *tcp_sk) {
+xy_tcp_socket *established_retrieve(xy_tcp_socket *tcp_sk) {
   while (true) {
     {
       read_lock();
@@ -44,20 +44,20 @@ inline xy_tcp_socket *established_retrieve(xy_tcp_socket *tcp_sk) {
   }
 }
 
-inline void established_tcp_sock_enqueue(xy_tcp_socket *tcp_sock) {
+void established_tcp_sock_enqueue(xy_tcp_socket *tcp_sock) {
   write_lock();
   xy_list_add_head(&list_established, (xy_list_node *)tcp_sock);
 }
 
-inline void established_tcp_sock_dequeue(xy_tcp_socket *tcp_sock) {
+void established_tcp_sock_dequeue(xy_tcp_socket *tcp_sock) {
   write_lock();
   xy_list_del((xy_list_node *)tcp_sock);
 }
 
-inline xy_tcp_socket *established_tcp_sock_look_up(rte_be32_t dst_ip_be,
-                                                   rte_be16_t dst_port_be,
-                                                   rte_be32_t src_ip_be,
-                                                   rte_be16_t src_port_be) {
+xy_tcp_socket *established_tcp_sock_look_up(rte_be32_t dst_ip_be,
+                                            rte_be16_t dst_port_be,
+                                            rte_be32_t src_ip_be,
+                                            rte_be16_t src_port_be) {
   read_lock();
   xy_list_node *head = &list_established;
   for (xy_list_node *pos = (head)->next; pos != (head); pos = pos->next) {
@@ -68,4 +68,5 @@ inline xy_tcp_socket *established_tcp_sock_look_up(rte_be32_t dst_ip_be,
       return (xy_tcp_socket *)node;
     }
   }
+  return NULL;
 }

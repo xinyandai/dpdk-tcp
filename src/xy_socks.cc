@@ -54,10 +54,10 @@ xy_tcp_socket *listener_tcp_sock_lookup(rte_be32_t dst_ip_be,
   return NULL;
 }
 
-inline xy_tcp_socket *syn_rcvd_tcp_sock_lookup(rte_be32_t dst_ip_be,
-                                               rte_be16_t dst_port_be,
-                                               rte_be32_t src_ip_be,
-                                               rte_be16_t src_port_be) {
+xy_tcp_socket *syn_rcvd_tcp_sock_lookup(rte_be32_t dst_ip_be,
+                                        rte_be16_t dst_port_be,
+                                        rte_be32_t src_ip_be,
+                                        rte_be16_t src_port_be) {
   xy_list_node *head = &list_syn_recved;
   for (xy_list_node *pos = (head)->next; pos != (head); pos = pos->next) {
     xy_tcp_socket *node = (xy_tcp_socket *)pos;

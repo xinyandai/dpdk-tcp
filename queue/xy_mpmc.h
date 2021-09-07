@@ -18,7 +18,8 @@ typedef struct {
   mpmc_list_node tail;
 } mpmc_list;
 
-int mpmc_list_add_head(mpmc_list_node* head, mpmc_list_node* node) {
+static inline int mpmc_list_add_head(mpmc_list_node* head,
+                                     mpmc_list_node* node) {
   if (!head || !node) return -1;
   mpmc_list_node* next = head->next;
   std::lock_guard<std::mutex> head_lock(head->mtx);
@@ -30,7 +31,8 @@ int mpmc_list_add_head(mpmc_list_node* head, mpmc_list_node* node) {
   return 0;
 }
 
-int mpmc_list_add_tail(mpmc_list_node* tail, mpmc_list_node* node) {
+static inline int mpmc_list_add_tail(mpmc_list_node* tail,
+                                     mpmc_list_node* node) {
   if (!tail || !node) return -1;
   mpmc_list_node* prev = tail->prev;
   std::lock_guard<std::mutex> prev_lock(prev->mtx);
@@ -43,7 +45,8 @@ int mpmc_list_add_tail(mpmc_list_node* tail, mpmc_list_node* node) {
   return 0;
 }
 
-mpmc_list_node* mpmc_list_del_head(mpmc_list_node* head, mpmc_list_node* tail) {
+static inline mpmc_list_node* mpmc_list_del_head(mpmc_list_node* head,
+                                                 mpmc_list_node* tail) {
   std::lock_guard<std::mutex> head_lock(head->mtx);
   /// can not add head since the head is locked,
   /// first is always a valid  pointer since no one can delete it

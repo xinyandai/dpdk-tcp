@@ -1,7 +1,7 @@
 #include <rte_ether.h>
 #include "xy_api.h"
 
-inline int arp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh, int len) {
+int arp_recv(struct rte_mbuf *m_buf, struct rte_ether_hdr *eh, int len) {
   auto *ah = (struct rte_arp_hdr *)((unsigned char *)eh + RTE_ETHER_HDR_LEN);
 
   if (len < (int)(sizeof(struct rte_ether_hdr) + sizeof(struct rte_arp_hdr))) {

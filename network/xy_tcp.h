@@ -9,7 +9,7 @@
 #include <rte_tcp.h>
 
 #include "xy_struct.h"
-
+/**
 //                                            Transmission Control Protocol
 //                                                 Functional Specification
 //
@@ -62,7 +62,7 @@
 //                               +---------+                   +---------+
 //
 //                       TCP Connection State Diagram
-
+*/
 /**
  * \brief process the received TCP package.
  * \param m_buf the received rte_mbuf package.
