@@ -47,7 +47,7 @@ static inline int state_tcp_listen(xy_tcp_socket *listener,
                                             .mac_dst = eh->s_addr}}};
 
     tcp_sk->tcb = allocate_tcb();
-    std::memset(tcp_sk->tcb, sizeof(struct tcb));
+    std::memset(tcp_sk->tcb, 0, sizeof(struct tcb));
 
     uint32_t iss = random_generate_iss();
     *(tcp_sk->tcb) = {

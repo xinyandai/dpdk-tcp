@@ -12,3 +12,10 @@ A user space TCP/IP stack library with DPDK-supported kernel-bypass.
 * [ ] tcp keep alive
 * [ ] tcp timeout retransmit
 * [x] A thread-safe queue between user/app thread and DPDK thread  
+
+* compile
+```shell
+meson setup buildir && cd buildir
+ninja
+```
+* 

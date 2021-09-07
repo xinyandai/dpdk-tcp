@@ -6,13 +6,12 @@
 #define DPDK_TCP_INCLUDE_XY_TCP_WND_HDL_H_
 #include "xy_struct.h"
 
-
-
 /**
  * \param tcp_sk
  * \return
  */
-int tcp_ack_window_update(xy_tcp_socket *tcp_sk, struct rte_tcp_hdr *tcp_h) {
+static inline int tcp_ack_window_update(xy_tcp_socket *tcp_sk,
+                                 struct rte_tcp_hdr *tcp_h) {
   struct tcb *tcb = tcp_sk->tcb;
 
   if xy_likely (tcb->snd_una < tcp_h->recv_ack &&
@@ -34,7 +33,6 @@ int tcp_ack_window_update(xy_tcp_socket *tcp_sk, struct rte_tcp_hdr *tcp_h) {
       tcb->snd_wl2 = tcp_h->recv_ack;
     }
   } else if (tcp_h->recv_ack > tcb->snd_nxt) {
-
   }
   return 0;
 }
@@ -46,8 +44,8 @@ int tcp_ack_window_update(xy_tcp_socket *tcp_sk, struct rte_tcp_hdr *tcp_h) {
  * \param tcp_h
  * \return
  */
-int tcp_recv_window_update(xy_tcp_socket *tcp_sk, struct rte_mbuf *buf,
-                           struct rte_tcp_hdr *tcp_h) {
+static inline int tcp_recv_window_update(xy_tcp_socket *tcp_sk, struct rte_mbuf *buf,
+                                  struct rte_tcp_hdr *tcp_h) {
   /// [head_, head_ + wnd_size]
   /// [rcv_nxt, rcv_nxt + wnd_size]: acceptable
   xy_tcp_rcv_wnd *window = &tcp_sk->tcb->rcv_wnd_buffer;

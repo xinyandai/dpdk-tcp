@@ -174,7 +174,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       }
       break;
 
-    case TCP_TIME_WAIT:
+    default:
       break;
   }
 
@@ -197,6 +197,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     case TCP_FIN_WAIT_1:
     case TCP_FIN_WAIT_2:
       state_tcp_handle_data(tcp_sk, m_buf, tcp_h);
+      break;
+    default:
       break;
   }
 

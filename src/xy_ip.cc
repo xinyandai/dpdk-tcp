@@ -1,7 +1,7 @@
 #include "xy_api.h"
 
-inline int ip_setup(xy_ip_socket *ip_sk, struct rte_ipv4_hdr *iph,
-                    uint8_t next_proto_id, rte_be16_t total_length) {
+int ip_setup(xy_ip_socket *ip_sk, struct rte_ipv4_hdr *iph,
+             uint8_t next_proto_id, rte_be16_t total_length) {
   iph->version_ihl = 0x45;   // version and header length
   iph->type_of_service = 0;  // TODO
   iph->total_length = total_length;
