@@ -1,9 +1,11 @@
 project('dpdk-tcp', 'c', 'cpp', default_options : ['cpp_std=c++17'])
 dpdk = dependency('libdpdk')
 
-incdir = include_directories('queue', 'network')
-tcp_lib_src = ['src/xy_api.cc', 'src/xy_arp.cc', 'src/xy_eth.cc', 'src/xy_icmp.cc', 'src/xy_init.cc', 'src/xy_ip.cc', 'src/xy_socks.cc', 'src/xy_syn_api.cc', 'src/xy_syn_socks.cc', 'src/xy_tcp.cc', 'src/xy_tcp_recv.cc', 'src/xy_tcp_send.cc']
-
+incdir = include_directories('queue/include', 'network/include')
+tcp_lib_src = [ 'network/src/xy_api.cc', 'network/src/xy_arp.cc', 'network/src/xy_eth.cc', 'network/src/xy_icmp.cc',
+                'network/src/xy_init.cc', 'network/src/xy_ip.cc', 'network/src/xy_socks.cc', 'network/src/xy_tcp.cc',
+                'network/src/xy_tcp_recv.cc', 'network/src/xy_tcp_send.cc', 'network/src/xy_epoll.cc', 'network/src/xy_manage.cc'
+                'queue/src/xy_syn_api.cc', 'queue/src/xy_syn_socks.cc', ]
 
 tcp_lib = shared_library('tcp_lib',
                         tcp_lib_src,

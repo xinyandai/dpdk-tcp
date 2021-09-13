@@ -6,71 +6,79 @@
 #define DPDK_TCP_MIDDLEWARE_XY_SYN_API_H_
 #include <condition_variable>
 
-#include "xy_mpmc.h"
 #include "xy_struct.h"
+#include "xy_mpmc.h"
 #include "xy_syn_socks.h"
 
-
 enum xy_ops_type {
-  XY_OPS_CREATE,
-  XY_OPS_BIND,
-  XY_OPS_LISTEN,
-  XY_OPS_ACCEPT,
-  XY_OPS_CONNECT,
-  XY_OPS_CLOSE,
-  XY_OPS_SEND,
-  XY_OPS_RECV
+  XY_TCP_OPS_CREATE,
+  XY_TCP_OPS_BIND,
+  XY_TCP_OPS_LISTEN,
+  XY_TCP_OPS_ACCEPT,
+  XY_TCP_OPS_CONNECT,
+  XY_TCP_OPS_CLOSE,
+  XY_TCP_OPS_SEND,
+  XY_TCP_OPS_RECV,
+
+  XY_EPOLL_OPS_CREAT,
 };
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
 } xy_ops_create;
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
   uint32_t ip;
   uint16_t port;
 } xy_ops_bind;
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
 } xy_ops_listen;
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
   uint32_t *ip;
   uint16_t *port;
 } xy_ops_accept;
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
   uint32_t *ip;
   uint16_t *port;
 } xy_ops_connect;
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
 } xy_ops_close;
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
   const char *buf;
   size_t len;
   ssize_t ret;
 } xy_ops_send;
 
 typedef struct {
-  xy_tcp_socket* tcp_sk;
+  int sock_id;
   char *buf;
   size_t len;
   ssize_t ret;
 } xy_ops_recv;
 
 typedef struct {
+  int size;
+  int sock_id;
+} xy_epoll_ops_create;
+
+typedef struct {
   xy_ops_type type;
   uint8_t done;
   std::mutex mutex;
   std::condition_variable cv;
+  int err_no;
+
   union {
     xy_ops_create create_;
     xy_ops_bind bind_;
@@ -80,6 +88,7 @@ typedef struct {
     xy_ops_close close_;
     xy_ops_send send_;
     xy_ops_recv recv_;
+    xy_epoll_ops_create epoll_create_;
   };
 } xy_socket_ops;
 

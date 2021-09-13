@@ -5,17 +5,21 @@
 #ifndef DPDK_TCP_NETWORK_XY_TCP_STATE_OTHERS_H_
 #define DPDK_TCP_NETWORK_XY_TCP_STATE_OTHERS_H_
 #include "xy_api.h"
+#include "xy_epoll.h"
 
 static inline int state_tcp_handle_data(xy_tcp_socket *tcp_sk,
                                         struct rte_mbuf *buf,
                                         struct rte_tcp_hdr *tcp_h) {
+  struct tcb *sock_tcb = get_tcb(tcp_sk);
+  /// TODO
+  epoll_event_callback(tcp_sk->id, XY_EPOLLIN);
   /// enqueue and window management
   tcp_recv_window_update(tcp_sk, buf, tcp_h);
 
   /// <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
   struct rte_mbuf *reply_buf = rte_pktmbuf_alloc(buf_pool);
-  tcp_send(tcp_sk, reply_buf, RTE_TCP_ACK_FLAG, tcp_sk->tcb->snd_nxt,
-           tcp_sk->tcb->rcv_nxt, 0);
+  tcp_send(tcp_sk, reply_buf, RTE_TCP_ACK_FLAG, sock_tcb->snd_nxt,
+           sock_tcb->rcv_nxt, 0);
   return 0;
 }
 
@@ -42,7 +46,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
                                       struct rte_tcp_hdr *tcp_h,
                                       struct rte_ipv4_hdr *iph,
                                       struct rte_ether_hdr *eh) {
-  struct tcb *tcb = tcp_sk->tcb;
+  struct tcb *sock_tcb = get_tcb(tcp_sk);
   const uint8_t tcp_flags = tcp_h->tcp_flags;
 
   ///  first check sequence number
@@ -66,12 +70,12 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
   ///  special allowance should be made to accept valid ACKs, URGs and
   ///  RSTs.
   int acceptable;
-  if (tcb->rcv_wnd == 0) {
+  if (sock_tcb->rcv_wnd == 0) {
     acceptable =
         tcp_flags & (RTE_TCP_ACK_FLAG | RTE_TCP_URG_FLAG | RTE_TCP_RST_FLAG);
   } else {
-    acceptable = tcp_h->sent_seq >= tcb->rcv_nxt ||
-                 tcp_h->sent_seq <= tcb->rcv_nxt + tcb->rcv_wnd;
+    acceptable = tcp_h->sent_seq >= sock_tcb->rcv_nxt ||
+                 tcp_h->sent_seq <= sock_tcb->rcv_nxt + sock_tcb->rcv_wnd;
   }
 
   if xy_unlikely (!acceptable) {
@@ -80,7 +84,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       return 0;
     } else {  /// send <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
       return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                         tcb->snd_nxt, tcb->rcv_nxt);
+                         sock_tcb->snd_nxt, sock_tcb->rcv_nxt);
     }
   }
 
@@ -134,8 +138,8 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
 
   switch (tcp_sk->state) {
     case TCP_SYN_RECEIVED:
-      if xy_unlikely (tcb->snd_una > tcp_h->recv_ack ||
-                      tcp_h->recv_ack > tcb->snd_nxt) {
+      if xy_unlikely (sock_tcb->snd_una > tcp_h->recv_ack ||
+                      tcp_h->recv_ack > sock_tcb->snd_nxt) {
         return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_RST_FLAG,
                            tcp_h->recv_ack, 0);
       } else {
@@ -149,7 +153,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     case TCP_FIN_WAIT_1:
       tcp_ack_window_update(tcp_sk, tcp_h);
       // TODO Way to check whether FIN is acknowledged?
-      if (tcp_h->recv_ack == tcb->snd_nxt) {
+      if (tcp_h->recv_ack == sock_tcb->snd_nxt) {
         tcp_sk->state = TCP_FIN_WAIT_2;
       }
       break;
@@ -159,7 +163,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
     case TCP_CLOSE_WAIT:
       tcp_ack_window_update(tcp_sk, tcp_h);
       // TODO Way to check whether FIN is acknowledged?
-      if (tcp_h->recv_ack == tcb->snd_nxt) {
+      if (tcp_h->recv_ack == sock_tcb->snd_nxt) {
         tcp_sk->state = TCP_TIME_WAIT;
       }
       break;
@@ -168,7 +172,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       break;
     case TCP_LAST_ACK:
       if (tcp_h->recv_ack ==
-          tcb->snd_nxt) {  // TODO Way to check whether FIN is
+          sock_tcb->snd_nxt) {  // TODO Way to check whether FIN is
         // acknowledged?
         tcp_sk->state = TCP_CLOSE;  // TODO clean it
       }
@@ -184,7 +188,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       case TCP_ESTABLISHED:
       case TCP_FIN_WAIT_1:
       case TCP_FIN_WAIT_2:
-        tcb->rcv_up = xy_max(tcb->rcv_up, tcp_h->tcp_urp);
+        sock_tcb->rcv_up = xy_max(sock_tcb->rcv_up, tcp_h->tcp_urp);
         break;
       default:
         break;
@@ -225,7 +229,7 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
         /// TODO
         /// If our FIN has been ACKed, then enter TIME-WAIT, start the time-wait
         /// timer, turn off the other timers; otherwise enter the CLOSING state.
-        if (tcp_h->recv_ack == tcb->snd_nxt) {
+        if (tcp_h->recv_ack == sock_tcb->snd_nxt) {
           tcp_sk->state = TCP_TIME_WAIT;
         } else {
           tcp_sk->state = TCP_CLOSING;
@@ -247,9 +251,9 @@ static inline int state_tcp_otherwise(xy_tcp_socket *tcp_sk,
       default:
         break;
     }
-    tcb->rcv_nxt = tcp_h->sent_seq + 1;
+    sock_tcb->rcv_nxt = tcp_h->sent_seq + 1;
     return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, RTE_TCP_ACK_FLAG,
-                       tcb->snd_nxt, tcb->rcv_nxt);
+                       sock_tcb->snd_nxt, sock_tcb->rcv_nxt);
   }
 
   return 0;

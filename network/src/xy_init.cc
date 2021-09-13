@@ -1,5 +1,3 @@
-#include "xy_api.h"
-
 #include <arpa/inet.h>
 #include <inttypes.h>
 #include <rte_arp.h>
@@ -39,18 +37,11 @@ static void sig_handler(int sig_num) {
   exit(sig_num);
 }
 
-/**
- * Initializes a given port using global settings and with the RX
- * buffers coming from the buf_pool passed as a parameter.
- * \param buf_pool
- * \param eth_addr
- * \param port
- * \param n_rx_q
- * \param n_tx_q
- * \param nb_rxd
- * \param nb_txd
- * \return
- */
+int xy_init_socks() {
+  xy_socket_map_init();
+}
+
+
 int xy_dev_port_init(struct rte_mempool *buf_pool,
                      struct rte_ether_addr *eth_addr, uint16_t port,
                      uint16_t n_rx_q, uint16_t n_tx_q, uint16_t nb_rxd,
@@ -102,10 +93,7 @@ int xy_dev_port_init(struct rte_mempool *buf_pool,
   return 0;
 }
 
-/*
- * The main function, which does initialization and calls the
- * per-lcore functions.
- */
+
 struct rte_mempool *xy_setup(int argc, char *argv[]) {
   /* Initialize the Environment Abstraction Layer (EAL). */
   int ret = rte_eal_init(argc, argv);
@@ -120,8 +108,6 @@ struct rte_mempool *xy_setup(int argc, char *argv[]) {
   xy_rte_exit_if(nb_ports != 1, "Error: need 1 ports, but you have %d\n",
                  nb_ports);
 
-  xy_warn_if(rte_lcore_count() > 1,
-             "\nWARNING: Too many lcores enabled. Only 1 used.\n");
 
   const unsigned num_bufs = 8191;
   const unsigned mbuf_cache_size = 250;
@@ -135,10 +121,7 @@ struct rte_mempool *xy_setup(int argc, char *argv[]) {
   return buf_pool;
 }
 
-/**
- * The lcore main. This is the main thread that does the work, reading
- * from an input port and writing to an output port.
- */
+
 [[noreturn]] void lcore_main() {
   const uint16_t nb_ports = rte_eth_dev_count_total();
   // Check that the port is on the same NUMA node as the polling
@@ -160,13 +143,16 @@ struct rte_mempool *xy_setup(int argc, char *argv[]) {
   for (;;) {
     /// Get burst of RX packets, from first port of pair.
     struct rte_mbuf *buffers[BURST_SIZE];
+    xy_log("rte_eth_rx_burst\n");
     const uint16_t nb_rx = rte_eth_rx_burst(port, 0, buffers, BURST_SIZE);
 
+    xy_log("eth_recv : %d\n", nb_rx);
     for (int i = 0; i < nb_rx; i++) {
       eth_recv(buffers[i]);
     }
-
+    xy_log("xy_syn_event_handle\n");
     xy_syn_event_handle();
+    xy_log("established_send_buffers\n");
     established_send_buffers();
   }
 }

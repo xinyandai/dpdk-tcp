@@ -28,6 +28,8 @@
 #define xy_likely(x) (x)
 #endif
 
+#define xy_allocate(type) ((type*)malloc(sizeof(type)))
+#define xy_free(ptr) free(ptr)
 #define xy_assert(expr) assert(expr)
 
 #define xy_return_if(condition, ret) \
@@ -56,6 +58,11 @@
     if (xy_unlikely(condition)) {     \
       printf(__VA_ARGS__);            \
     }                                 \
+  } while (0)
+
+#define xy_log(...) \
+  do {                                \
+      printf(__VA_ARGS__);            \
   } while (0)
 
 #define xy_return_errno_if(condition, set_errno, ret, ...) \

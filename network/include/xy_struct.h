@@ -106,8 +106,11 @@ typedef struct {
   rte_be16_t port_src;
   rte_be16_t port_dst;
   xy_ip_socket ip_socket;
-  struct tcb* tcb;
+  struct tcb tcb;
 } xy_tcp_socket;
 
+static inline struct tcb* get_tcb(xy_tcp_socket* tcp_socket) {
+  return &tcp_socket->tcb;
+}
 
 #endif  // DPDK_TCP_INCLUDE_XY_STRUCT_H_

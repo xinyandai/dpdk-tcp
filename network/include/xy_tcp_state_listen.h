@@ -27,15 +27,12 @@ static inline int state_tcp_listen(xy_tcp_socket *listener,
 
   if (tcp_flags & RTE_TCP_SYN_FLAG) {  /// third check for a SYN
     // TODO check security
-    xy_tcp_socket *tcp_sk = allocate_tcp_socket();
+    xy_tcp_socket *tcp_sk = xy_allocate_tcp_socket();
     rte_memcpy(tcp_sk, listener, sizeof(xy_tcp_socket));
 
-    tcp_sk->id = tcp_socket_id();
-    tcp_sk->ref_cnt = 1;
-    tcp_sk->passive = 1;
-    tcp_sk->state = TCP_SYN_RECEIVED;
-    *tcp_sk = {.id = tcp_socket_id(),
-               .ref_cnt = 1,
+    struct tcb *sock_tcb = get_tcb(tcp_sk);
+
+    *tcp_sk = {.ref_cnt = 1,
                .passive = 1,
                .state = TCP_SYN_RECEIVED,
                .port_src = tcp_h->dst_port,
@@ -46,11 +43,10 @@ static inline int state_tcp_listen(xy_tcp_socket *listener,
                              .eth_socket = {.mac_src = eh->d_addr,
                                             .mac_dst = eh->s_addr}}};
 
-    tcp_sk->tcb = allocate_tcb();
-    std::memset(tcp_sk->tcb, 0, sizeof(struct tcb));
+    std::memset(&tcp_sk->tcb, 0, sizeof(struct tcb));
 
     uint32_t iss = random_generate_iss();
-    *(tcp_sk->tcb) = {
+    *sock_tcb = {
         .snd_una = iss,
         .snd_nxt = iss + 1,
         .snd_wnd = tcp_h->rx_win,
@@ -66,7 +62,7 @@ static inline int state_tcp_listen(xy_tcp_socket *listener,
 
     uint8_t sent_tcp_flags = RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG;
     return tcp_forward(tcp_sk, m_buf, tcp_h, iph, eh, sent_tcp_flags,
-                       tcp_sk->tcb->iss, tcp_sk->tcb->rcv_nxt);
+                       sock_tcb->iss, sock_tcb->rcv_nxt);
   }
 
   rte_pktmbuf_free(m_buf);
