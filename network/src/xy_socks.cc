@@ -4,25 +4,6 @@
 static XY_LIST_HEAD(list_listeners);
 static XY_LIST_HEAD(list_syn_recved);
 
-uint32_t tcp_socket_id() {
-  static uint32_t id = 0;
-  return ++id;
-}
-
-xy_tcp_socket *allocate_tcp_socket() {
-  return (xy_tcp_socket *)malloc(sizeof(xy_tcp_socket));
-}
-
-struct tcb *allocate_tcb() {
-  return (struct tcb *)malloc(sizeof(struct tcb));
-}
-
-void deallocate_tcb(xy_tcp_socket *tcp_sock) {
-  free(tcp_sock->tcb);
-  tcp_sock->tcb = NULL;
-}
-
-void deallocate_tcp_socket(xy_tcp_socket *tcp_sock) { free(tcp_sock); }
 
 void syn_recv_tcp_sock_enqueue(xy_tcp_socket *tcp_sock) {
   xy_list_add_head(&list_syn_recved, (xy_list_node *)tcp_sock);

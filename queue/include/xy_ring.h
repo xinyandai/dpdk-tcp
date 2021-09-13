@@ -6,7 +6,7 @@
 #define DPDK_TCP_INCLUDE_XY_RING_H_
 
 #include <atomic>
-#include "xy_macros.h"
+#include "include/xy_macros.h"
 
 #define XY_RING_SIZE (1 << 16)
 

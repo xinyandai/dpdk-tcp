@@ -7,11 +7,6 @@
 
 #include "xy_api.h"
 
-uint32_t tcp_socket_id();
-struct tcb *allocate_tcb();
-void deallocate_tcb(xy_tcp_socket *tcp_sock);
-xy_tcp_socket *allocate_tcp_socket();
-void deallocate_tcp_socket(xy_tcp_socket *tcp_sock);
 
 void syn_recv_tcp_sock_enqueue(xy_tcp_socket *tcp_sock);
 

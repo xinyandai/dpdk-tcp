@@ -1,6 +1,8 @@
 #include "xy_api.h"
+#include "xy_epoll.h"
 
 int main(int argc, char *argv[]) {
+
   struct rte_mempool *buf_pool = xy_setup(argc, argv);
 
   uint16_t port = 0;
@@ -11,5 +13,6 @@ int main(int argc, char *argv[]) {
   xy_dev_port_init(buf_pool, &xy_this_mac, port, rx_rings, tx_rings, nb_rxd,
                    nb_txd);
 
+  xy_init_socks();
   lcore_main();
 }

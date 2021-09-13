@@ -9,9 +9,9 @@
 #include <rte_ether.h>
 #include <rte_mbuf.h>
 
+#include "xy_mpmc.h"
 #include "xy_list.h"
 #include "xy_macros.h"
-#include "xy_mpmc.h"
 
 /***
  * the {struct rte_mbuf} is erased and reused as {xy_mbuf_list}, a struct of

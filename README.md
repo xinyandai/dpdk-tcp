@@ -3,6 +3,7 @@
 A user space TCP/IP stack library with DPDK-supported kernel-bypass.
 
 * [x] socket-like API
+* [x] epoll-like API
 * [x] arp reply
 * [ ] routing table
 * [x] ip/icmp reply
